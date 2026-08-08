@@ -16,6 +16,11 @@ import {
   groundNode,
   toPlatformNode,
 } from "@/game/generation/validateReachability";
+import {
+  resolveEntityVisual,
+  selectEntityVisualKind,
+} from "@/game/art/selectVisual";
+import type { GameEntitySpec } from "@/game/types";
 import { clutteredScene, deskScene } from "./fixtures/scenes";
 
 describe("clamp", () => {
@@ -69,6 +74,41 @@ describe("mechanic mapping", () => {
   });
 });
 
+describe("object-aware visual mapping", () => {
+  const entity = (
+    sourceLabel: string,
+    mechanic: GameEntitySpec["mechanic"],
+    properties = "",
+  ): GameEntitySpec => ({
+    id: `visual-${sourceLabel}`,
+    sourceLabel,
+    mechanic,
+    bounds: { x: 100, y: 100, width: 120, height: 36 },
+    metadata: { properties },
+  });
+
+  it("uses recognizable photographed-object art before generic fallbacks", () => {
+    expect(selectEntityVisualKind(entity("notebook", "static_platform", "flat,rigid"))).toBe("book-platform");
+    expect(selectEntityVisualKind(entity("yellow pencil", "static_platform", "long,thin"))).toBe("pencil-bridge");
+    expect(selectEntityVisualKind(entity("water bottle", "static_platform", "tall,container"))).toBe("bottle-tower");
+    expect(selectEntityVisualKind(entity("coffee mug", "bounce_pad", "round,hollow"))).toBe("mug-bouncer");
+    expect(selectEntityVisualKind(entity("scissors", "hazard", "sharp,rigid"))).toBe("scissors");
+    expect(selectEntityVisualKind(entity("eraser", "collectible", "small,soft"))).toBe("eraser");
+  });
+
+  it("falls back safely for unknown labels and legacy specs", () => {
+    expect(selectEntityVisualKind(entity("mystery object", "hazard"))).toBe("spike-strip");
+    expect(resolveEntityVisual(entity("mystery object", "collectible"))).toEqual({
+      kind: "gem",
+      componentId: "collectible-gem",
+    });
+  });
+
+  it("prioritizes the final mechanic after repair conversions", () => {
+    expect(selectEntityVisualKind(entity("scissors", "collectible", "sharp,rigid"))).toBe("gem");
+  });
+});
+
 describe("reachability", () => {
   const platform = (x: number, y: number, width = 160) =>
     toPlatformNode({
@@ -108,6 +148,9 @@ describe("generateLevel", () => {
   it("produces a safe, reachable, goal-bearing spec", () => {
     const spec = generateLevel(deskScene, { imageUrl: "https://example.test/a.jpg" });
     expect(isSpecSafe(spec)).toBe(true);
+    expect(spec.visualVersion).toBe(1);
+    expect(spec.entities.every((entity) => entity.visual?.kind)).toBe(true);
+    expect(spec.entities.every((entity) => entity.visual?.componentId)).toBe(true);
     expect(spec.validation.reachable).toBe(true);
     expect(spec.entities.filter((entity) => entity.mechanic === "goal")).toHaveLength(1);
   });

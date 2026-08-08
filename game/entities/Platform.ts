@@ -1,14 +1,20 @@
 import * as Phaser from "phaser";
 import type { GameEntitySpec } from "@/game/types";
 import type { ThemePalette } from "@/game/theme";
+import {
+  animateEntityArt,
+  attachEntityArt,
+  syncEntityArt,
+  type EntityArtCarrier,
+} from "@/game/art/entityArt";
 
 export type StaticRect = Phaser.GameObjects.Rectangle & {
   body: Phaser.Physics.Arcade.StaticBody;
-};
+} & EntityArtCarrier;
 
 export type MovingPlatform = Phaser.GameObjects.Rectangle & {
   body: Phaser.Physics.Arcade.Body;
-};
+} & EntityArtCarrier;
 
 function centered(entity: GameEntitySpec) {
   return {
@@ -30,9 +36,8 @@ export function createStaticPlatform(
     entity.bounds.height,
     entity.metadata?.role === "helper" ? palette.movingPlatform : palette.platform,
   );
-  rect.setStrokeStyle(3, 0x000000, 0.35);
   scene.physics.add.existing(rect, true);
-  return rect as StaticRect;
+  return attachEntityArt(scene, rect as StaticRect, entity, palette);
 }
 
 export function createMovingPlatform(
@@ -48,10 +53,9 @@ export function createMovingPlatform(
     entity.bounds.height,
     palette.movingPlatform,
   );
-  rect.setStrokeStyle(3, 0x000000, 0.35);
   scene.physics.add.existing(rect);
 
-  const platform = rect as MovingPlatform;
+  const platform = attachEntityArt(scene, rect as MovingPlatform, entity, palette);
   platform.body.setAllowGravity(false);
   platform.body.setImmovable(true);
 
@@ -69,6 +73,7 @@ export function createMovingPlatform(
     ease: "Sine.easeInOut",
     onUpdate: () => {
       platform.body.updateFromGameObject();
+      syncEntityArt(platform);
     },
   });
 
@@ -88,17 +93,8 @@ export function createBouncePad(
     entity.bounds.height,
     palette.bouncePad,
   );
-  rect.setStrokeStyle(3, 0x000000, 0.35);
   scene.physics.add.existing(rect, true);
-
-  scene.tweens.add({
-    targets: rect,
-    scaleY: 0.7,
-    duration: 700,
-    yoyo: true,
-    repeat: -1,
-    ease: "Sine.easeInOut",
-  });
-
-  return rect as StaticRect;
+  const pad = attachEntityArt(scene, rect as StaticRect, entity, palette);
+  animateEntityArt(scene, pad, entity.mechanic);
+  return pad;
 }

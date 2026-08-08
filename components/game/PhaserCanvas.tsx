@@ -58,10 +58,18 @@ export function PhaserCanvas({ spec, onBus }: PhaserCanvasProps) {
 
   return (
     <div
-      ref={containerRef}
       aria-label={`Playable level: ${spec.title}`}
-      // touch-none: gameplay taps must not trigger browser double-tap/pinch zoom.
-      className="aspect-[16/9] w-full touch-none overflow-hidden rounded-2xl border-[3px] border-ink bg-black shadow-sticker [&>canvas]:touch-none"
-    />
+      className="relative aspect-[16/9] w-full touch-none overflow-hidden rounded-2xl border-[3px] border-ink bg-black shadow-sticker"
+    >
+      {/*
+        Keep Phaser out of normal flow. Scale.FIT periodically measures its
+        parent and resizes the canvas; mounting directly in the aspect-ratio
+        frame lets those canvas dimensions feed back into the frame size.
+      */}
+      <div
+        ref={containerRef}
+        className="absolute inset-0 touch-none [&>canvas]:block [&>canvas]:touch-none"
+      />
+    </div>
   );
 }

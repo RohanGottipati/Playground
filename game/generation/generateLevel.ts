@@ -24,6 +24,7 @@ import {
   type PlatformNode,
 } from "./validateReachability";
 import { assertSpecIsSafe } from "./runtimeSafety";
+import { withResolvedVisual } from "@/game/art/selectVisual";
 
 export const SPAWN_X = 90;
 export const SPAWN_Y = GROUND_TOP - PLAYER_HEIGHT;
@@ -79,9 +80,11 @@ export function generateLevel(
   }
 
   const difficultyReport = calculateDifficulty(entities, goal);
+  entities = entities.map(withResolvedVisual);
 
   const spec: GameSpec = {
     schemaVersion: 1,
+    visualVersion: 1,
     title: (options.titleOverride ?? analysis.titleSuggestion).slice(0, 60),
     slug: options.slug,
     theme: analysis.themeSuggestion,

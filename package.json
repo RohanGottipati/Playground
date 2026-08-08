@@ -9,7 +9,10 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "components:check": "node scripts/sync-component-catalog.mjs --dry-run",
+    "components:sync": "node scripts/sync-component-catalog.mjs",
+    "components:backfill": "node scripts/backfill-game-component-ids.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
