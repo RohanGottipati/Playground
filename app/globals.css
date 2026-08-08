@@ -20,6 +20,13 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+@media (pointer: fine) {
+  body,
+  body * {
+    cursor: none !important;
+  }
+}
+
 @layer components {
   .sticker {
     @apply rounded-xl border-[3px] border-ink shadow-sticker;

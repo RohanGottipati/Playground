@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Rubik, Fraunces } from "next/font/google";
 import "./globals.css";
 import { BackgroundVideo } from "@/components/ui/BackgroundVideo";
+import { CustomCursor } from "@/components/ui/CustomCursor";
 import { NavPill } from "@/components/layout/NavPill";
 
 const display = Space_Grotesk({
@@ -43,6 +44,8 @@ export default function RootLayout({
       <body
         className={`${display.variable} ${body.variable} ${serif.variable} min-h-dvh font-body antialiased`}
       >
+        <CustomCursor />
+
         <div className="fixed inset-0 -z-10 overflow-hidden">
           <BackgroundVideo
             src="/playground-bg.mp4"
