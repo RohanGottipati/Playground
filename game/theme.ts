@@ -76,3 +76,46 @@ const PALETTES: Record<string, Partial<ThemePalette>> = {
 export function paletteForTheme(theme: string): ThemePalette {
   return { ...DEFAULT_PALETTE, ...(PALETTES[theme] ?? {}) };
 }
+
+type SpecLike = {
+  theme: string;
+  magicPatterns?: {
+    palette?: Partial<
+      Record<
+        | "background"
+        | "backgroundAccent"
+        | "platform"
+        | "collectible"
+        | "goal"
+        | "hazard",
+        number
+      >
+    >;
+  };
+};
+
+/**
+ * Theme palette with per-game accents adapted from the Magic Patterns design
+ * generated for this photo. Absent or partial palettes fall back cleanly.
+ */
+export function paletteForSpec(spec: SpecLike): ThemePalette {
+  const base = paletteForTheme(spec.theme);
+  const custom = spec.magicPatterns?.palette;
+  if (!custom) return base;
+
+  const overrides: Partial<ThemePalette> = {};
+  for (const key of [
+    "background",
+    "backgroundAccent",
+    "platform",
+    "collectible",
+    "goal",
+    "hazard",
+  ] as const) {
+    const value = custom[key];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      overrides[key] = value;
+    }
+  }
+  return { ...base, ...overrides };
+}

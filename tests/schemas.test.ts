@@ -21,7 +21,7 @@ describe("SceneAnalysisSchema", () => {
       objects: [
         {
           ...deskScene.objects[0],
-          normalizedBounds: { x: -0.4, y: 0.2, width: 0.2, height: 0.2 },
+          bounds: { x: -0.4, y: 0.2, width: 0.2, height: 0.2 },
         },
       ],
     };
@@ -31,5 +31,10 @@ describe("SceneAnalysisSchema", () => {
   it("rejects scenes with too few objects", () => {
     const invalid = { ...deskScene, objects: [], objectCount: 0 };
     expect(SceneAnalysisSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it("accepts one clearly visible object", () => {
+    const singleObject = { ...deskScene, objects: [deskScene.objects[0]] };
+    expect(SceneAnalysisSchema.safeParse(singleObject).success).toBe(true);
   });
 });

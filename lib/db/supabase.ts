@@ -1,8 +1,10 @@
 import { AppError } from "@/lib/errors/AppError";
 import type { SceneAnalysis } from "@/lib/backboard/schemas";
 import type { GameSpec, MechanicType } from "@/game/types";
+import { EMPTY_HINTS, type GenerationHints } from "@/game/generation/hints";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeObjectLabel } from "@/lib/utils/sanitize";
+import { logDiagnostic } from "@/lib/utils/logger";
 import { sortSummaries } from "./memory";
 import type {
   ArcadeSort,
@@ -10,6 +12,7 @@ import type {
   GameRecord,
   GameSessionRecord,
   GameSummary,
+  GenerationInsightInput,
   Leaderboard,
   MechanicDiscoveryRecord,
   PublishInput,
@@ -54,6 +57,8 @@ type SummaryRow = {
   title: string;
   creator_name: string;
   theme: string;
+  /** Absent until migration 0006 replaces the view. */
+  mode?: string | null;
   difficulty: number;
   source_image_url: string;
   detected_object_count: number;
@@ -106,6 +111,7 @@ function toSummary(row: SummaryRow): GameSummary {
     title: row.title,
     creatorName: row.creator_name,
     theme: row.theme,
+    mode: typeof row.mode === "string" && row.mode ? row.mode : "classic",
     difficulty: row.difficulty,
     sourceImageUrl: row.source_image_url,
     detectedObjectCount: row.detected_object_count,
@@ -558,5 +564,98 @@ export class SupabaseRepository implements Repository {
       })),
     );
     if (error) fail("saveGameObjects.insert", error);
+  }
+
+  /**
+   * Learning-loop read. Tolerates a database that predates migration 0006:
+   * any failure degrades to EMPTY_HINTS so generation never blocks on hints.
+   */
+  async getGenerationHints(): Promise<GenerationHints> {
+    try {
+      const client = this.client;
+      const [insights, games, sessions] = await Promise.all([
+        client
+          .from("generation_insights")
+          .select("mode, title")
+          .order("created_at", { ascending: false })
+          .limit(12),
+        client
+          .from("games")
+          .select("id, mode:game_spec->>mode")
+          .order("created_at", { ascending: false })
+          .limit(300),
+        client
+          .from("game_sessions")
+          .select("game_id, completed")
+          .order("started_at", { ascending: false })
+          .limit(1000),
+      ]);
+
+      const recent = insights.error
+        ? []
+        : ((insights.data ?? []) as { mode: string; title: string }[]);
+
+      const modeByGame = new Map<string, string>();
+      if (!games.error) {
+        for (const row of (games.data ?? []) as {
+          id: string;
+          mode: string | null;
+        }[]) {
+          modeByGame.set(row.id, row.mode ?? "classic");
+        }
+      }
+
+      const stats = new Map<string, { plays: number; completions: number }>();
+      if (!sessions.error) {
+        for (const row of (sessions.data ?? []) as {
+          game_id: string;
+          completed: boolean;
+        }[]) {
+          const mode = modeByGame.get(row.game_id);
+          if (!mode) continue;
+          const entry = stats.get(mode) ?? { plays: 0, completions: 0 };
+          entry.plays += 1;
+          if (row.completed) entry.completions += 1;
+          stats.set(mode, entry);
+        }
+      }
+
+      return {
+        recentModes: recent.map((row) => row.mode),
+        recentTitles: recent.map((row) => row.title),
+        modeStats: [...stats.entries()].map(([mode, entry]) => ({
+          mode,
+          plays: entry.plays,
+          completions: entry.completions,
+          completionRate:
+            entry.plays === 0 ? 0 : entry.completions / entry.plays,
+        })),
+      };
+    } catch (error) {
+      logDiagnostic("generation.hints_failed", {
+        message: error instanceof Error ? error.message : "unknown",
+      });
+      return EMPTY_HINTS;
+    }
+  }
+
+  /** Learning-loop write. Non-fatal by contract: failures are only logged. */
+  async saveGenerationInsight(input: GenerationInsightInput): Promise<void> {
+    const { error } = await this.client.from("generation_insights").insert({
+      game_id: input.gameId,
+      mode: input.mode,
+      seed: input.seed,
+      theme: input.theme,
+      difficulty: input.difficulty,
+      title: input.title,
+      object_labels: input.objectLabels,
+      mechanics: input.mechanics,
+      magic_patterns_id: input.magicPatternsId ?? null,
+      magic_patterns_editor_url: input.magicPatternsEditorUrl ?? null,
+      prompt_version: input.promptVersion,
+    });
+    if (error) {
+      logDiagnostic("generation.insight_failed", { message: error.message });
+    }
   }
 }

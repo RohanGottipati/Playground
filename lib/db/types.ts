@@ -1,4 +1,5 @@
 import type { GameSpec, GameEventType, MechanicType } from "@/game/types";
+import type { GenerationHints } from "@/game/generation/hints";
 import type { SceneAnalysis } from "@/lib/backboard/schemas";
 
 export type GameStatus = "draft" | "published" | "failed";
@@ -81,6 +82,7 @@ export type GameSummary = {
   title: string;
   creatorName: string;
   theme: string;
+  mode: string;
   difficulty: number;
   sourceImageUrl: string;
   detectedObjectCount: number;
@@ -187,6 +189,21 @@ export type SessionUpdate = {
   durationMs?: number;
 };
 
+/** One row of the learning loop: what generation produced for a game. */
+export type GenerationInsightInput = {
+  gameId: string;
+  mode: string;
+  seed: number;
+  theme: string;
+  difficulty: number;
+  title: string;
+  objectLabels: string[];
+  mechanics: string[];
+  magicPatternsId?: string | null;
+  magicPatternsEditorUrl?: string | null;
+  promptVersion: string;
+};
+
 export interface Repository {
   readonly kind: "supabase" | "memory";
   saveDraftGame(input: SaveDraftInput): Promise<GameRecord>;
@@ -219,4 +236,8 @@ export interface Repository {
     gameId: string,
     objects: Omit<GameObjectRecord, "id" | "gameId">[],
   ): Promise<void>;
+  /** Learning loop: aggregate past generations + play outcomes into hints. */
+  getGenerationHints(): Promise<GenerationHints>;
+  /** Learning loop: persist what this generation produced. */
+  saveGenerationInsight(input: GenerationInsightInput): Promise<void>;
 }

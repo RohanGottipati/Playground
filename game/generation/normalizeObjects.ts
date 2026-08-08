@@ -10,6 +10,7 @@ import type {
   SuggestedRole,
 } from "@/lib/backboard/schemas";
 import type { Rect } from "@/game/types";
+import { scrubBrandNames } from "@/lib/utils/genericName";
 
 export type NormalizedObject = {
   id: string;
@@ -79,16 +80,18 @@ export function normalizeObjects(analysis: SceneAnalysis): NormalizedObject[] {
       height: clamp(object.bounds.height, 0.001, 1),
     };
     const bounds = toWorldRect(normalizedBounds);
+    // Brand and product names never survive into a published game.
+    const label = scrubBrandNames(object.label.trim()).slice(0, 80);
     const duplicate = kept.some(
       (existing) =>
-        existing.label.toLowerCase() === object.label.toLowerCase() &&
+        existing.label.toLowerCase() === label.toLowerCase() &&
         intersectionOverUnion(existing.bounds, bounds) > DEDUPE_IOU,
     );
     if (duplicate) continue;
 
     kept.push({
       id,
-      label: object.label.trim().slice(0, 80),
+      label,
       confidence: clamp(object.confidence, 0, 1),
       properties: dedupeProperties(object.properties),
       role: object.suggestedRole,

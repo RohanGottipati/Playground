@@ -1,7 +1,11 @@
 import { randomUUID } from "crypto";
 import { failure, ok } from "@/lib/api/respond";
 import { AppError } from "@/lib/errors/AppError";
-import { storeSourceImage, validateImage } from "@/lib/storage/images";
+import {
+  normalizeSourceImage,
+  storeSourceImage,
+  validateImage,
+} from "@/lib/storage/images";
 import { checkRateLimit, clientKey, RATE_LIMITS } from "@/lib/utils/rateLimit";
 import { logDiagnostic } from "@/lib/utils/logger";
 
@@ -19,13 +23,20 @@ export async function POST(request: Request) {
     validateImage(file);
 
     const gameId = randomUUID();
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const stored = await storeSourceImage(gameId, bytes, file.type);
+    const originalBytes = new Uint8Array(await file.arrayBuffer());
+    const normalized = await normalizeSourceImage(originalBytes);
+    const stored = await storeSourceImage(
+      gameId,
+      normalized.bytes,
+      normalized.mimeType,
+    );
 
     logDiagnostic("upload.completed", {
       gameId,
-      bytes: bytes.byteLength,
-      mimeType: file.type,
+      originalBytes: originalBytes.byteLength,
+      normalizedBytes: normalized.bytes.byteLength,
+      originalMimeType: file.type,
+      storedMimeType: normalized.mimeType,
     });
 
     return ok({ gameId, imagePath: stored.path, imageUrl: stored.url });

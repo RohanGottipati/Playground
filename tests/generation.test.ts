@@ -21,6 +21,7 @@ import {
   selectEntityVisualKind,
 } from "@/game/art/selectVisual";
 import type { GameEntitySpec } from "@/game/types";
+import type { SceneAnalysis } from "@/lib/backboard/schemas";
 import { clutteredScene, deskScene } from "./fixtures/scenes";
 
 describe("clamp", () => {
@@ -187,6 +188,90 @@ describe("generateLevel", () => {
     if (spec.validation.repaired) {
       expect(spec.validation.repairActions.length).toBeGreaterThan(0);
     }
+  });
+
+  it("builds a recognizable playable course from one car", () => {
+    const analysis: SceneAnalysis = {
+      ...deskScene,
+      titleSuggestion: "Car Run",
+      objects: [
+        {
+          ...deskScene.objects[0],
+          id: "car-1",
+          label: "car",
+          properties: ["large", "rigid"],
+          suggestedRole: "moving_platform",
+          bounds: { x: 0.28, y: 0.62, width: 0.42, height: 0.2 },
+        },
+      ],
+    };
+
+    const spec = generateLevel(analysis, { imageUrl: "https://example.test/car.jpg" });
+    const car = spec.entities.find((entity) => entity.sourceLabel === "car");
+    const sparseHelpers = spec.entities.filter(
+      (entity) => entity.metadata?.sparseCourse === true,
+    );
+
+    expect(spec.source.detectedObjectCount).toBe(1);
+    expect(car?.mechanic).toBe("moving_platform");
+    expect(car?.visual?.componentId).toBe("veh-car");
+    expect(sparseHelpers).toHaveLength(1);
+    expect(isSpecSafe(spec)).toBe(true);
+  });
+
+  it("keeps one mug recognizable while adding one support", () => {
+    const analysis: SceneAnalysis = {
+      ...deskScene,
+      titleSuggestion: "Mug Bounce",
+      objects: [
+        {
+          ...deskScene.objects[0],
+          id: "mug-1",
+          label: "mug",
+          properties: ["round", "hollow"],
+          suggestedRole: "bounce_pad",
+          bounds: { x: 0.36, y: 0.48, width: 0.28, height: 0.4 },
+        },
+      ],
+    };
+
+    const spec = generateLevel(analysis, { imageUrl: "https://example.test/mug.jpg" });
+    const mug = spec.entities.find((entity) => entity.sourceLabel === "mug");
+
+    expect(mug?.mechanic).toBe("bounce_pad");
+    expect(mug?.visual?.componentId).toBe("kit-mug");
+    expect(
+      spec.entities.filter((entity) => entity.metadata?.sparseCourse === true),
+    ).toHaveLength(1);
+    expect(isSpecSafe(spec)).toBe(true);
+  });
+
+  it("adds two neutral supports when the only object is a hazard", () => {
+    const analysis: SceneAnalysis = {
+      ...deskScene,
+      titleSuggestion: "Knife Edge",
+      objects: [
+        {
+          ...deskScene.objects[0],
+          id: "knife-1",
+          label: "knife",
+          properties: ["sharp", "rigid"],
+          suggestedRole: "hazard",
+          bounds: { x: 0.75, y: 0.68, width: 0.14, height: 0.05 },
+        },
+      ],
+    };
+
+    const spec = generateLevel(analysis, {
+      imageUrl: "https://example.test/knife.jpg",
+    });
+
+    expect(spec.source.detectedObjectCount).toBe(1);
+    expect(spec.entities.some((entity) => entity.sourceLabel === "knife")).toBe(true);
+    expect(
+      spec.entities.filter((entity) => entity.metadata?.sparseCourse === true),
+    ).toHaveLength(2);
+    expect(isSpecSafe(spec)).toBe(true);
   });
 });
 

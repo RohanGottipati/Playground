@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { AppError } from "@/lib/errors/AppError";
 import { normalizeObjectLabel } from "@/lib/utils/sanitize";
+import { EMPTY_HINTS, type GenerationHints } from "@/game/generation/hints";
 import type {
   ArcadeSort,
   GameEventRecord,
@@ -8,6 +9,7 @@ import type {
   GameRecord,
   GameSessionRecord,
   GameSummary,
+  GenerationInsightInput,
   Leaderboard,
   MechanicDiscoveryRecord,
   PublishInput,
@@ -18,6 +20,8 @@ import type {
   StatsSnapshot,
 } from "./types";
 
+type StoredInsight = GenerationInsightInput & { createdAt: string };
+
 type MemoryState = {
   games: Map<string, GameRecord>;
   objects: GameObjectRecord[];
@@ -25,6 +29,7 @@ type MemoryState = {
   events: GameEventRecord[];
   likes: Set<string>;
   discoveries: Map<string, MechanicDiscoveryRecord>;
+  insights: StoredInsight[];
   eventId: number;
 };
 
@@ -41,6 +46,7 @@ function state(): MemoryState {
       events: [],
       likes: new Set(),
       discoveries: new Map(),
+      insights: [],
       eventId: 1,
     };
   }
@@ -169,6 +175,7 @@ export class MemoryRepository implements Repository {
       title: game.title,
       creatorName: game.creatorName,
       theme: game.theme,
+      mode: game.gameSpec.mode ?? "classic",
       difficulty: game.difficulty,
       sourceImageUrl: game.sourceImageUrl,
       detectedObjectCount: game.detectedObjectCount,
@@ -393,6 +400,46 @@ export class MemoryRepository implements Repository {
     store.objects = store.objects.filter((object) => object.gameId !== gameId);
     for (const object of objects) {
       store.objects.push({ ...object, id: randomUUID(), gameId });
+    }
+  }
+
+  async getGenerationHints(): Promise<GenerationHints> {
+    const store = state();
+    const recent = [...store.insights].reverse().slice(0, 12);
+    if (recent.length === 0 && store.games.size === 0) return EMPTY_HINTS;
+
+    const modeByGame = new Map<string, string>();
+    for (const game of store.games.values()) {
+      modeByGame.set(game.id, game.gameSpec.mode ?? "classic");
+    }
+
+    const stats = new Map<string, { plays: number; completions: number }>();
+    for (const session of store.sessions.values()) {
+      const mode = modeByGame.get(session.gameId);
+      if (!mode) continue;
+      const entry = stats.get(mode) ?? { plays: 0, completions: 0 };
+      entry.plays += 1;
+      if (session.completed) entry.completions += 1;
+      stats.set(mode, entry);
+    }
+
+    return {
+      recentModes: recent.map((insight) => insight.mode),
+      recentTitles: recent.map((insight) => insight.title),
+      modeStats: [...stats.entries()].map(([mode, entry]) => ({
+        mode,
+        plays: entry.plays,
+        completions: entry.completions,
+        completionRate: entry.plays === 0 ? 0 : entry.completions / entry.plays,
+      })),
+    };
+  }
+
+  async saveGenerationInsight(input: GenerationInsightInput): Promise<void> {
+    const store = state();
+    store.insights.push({ ...input, createdAt: new Date().toISOString() });
+    if (store.insights.length > 200) {
+      store.insights = store.insights.slice(-200);
     }
   }
 }

@@ -27,6 +27,56 @@ export function collectSafetyIssues(spec: GameSpec): SafetyIssue[] {
     issues.push(`portal count must be 0 or 2, found ${portals.length}`);
   }
 
+  // Mode invariants: a locked goal must always be unlockable.
+  const targets = spec.entities.filter((entity) => entity.mechanic === "target");
+  const collectibles = spec.entities.filter(
+    (entity) => entity.mechanic === "collectible",
+  );
+  if (spec.shooter) {
+    if (targets.length === 0) {
+      issues.push("shooter mode requires at least one target");
+    }
+    if (spec.shooter.requiredKills > targets.length) {
+      issues.push("shooter requires more kills than targets exist");
+    }
+    if (!spec.player.canShoot || !spec.projectile) {
+      issues.push("shooter mode requires a shooting player and projectile spec");
+    }
+  } else if (targets.length > 0 && spec.mode !== "shooter") {
+    issues.push("targets exist without a shooter configuration");
+  }
+  if (spec.projectile) {
+    const { speed, cooldownMs, maxRangePx } = spec.projectile;
+    if (
+      ![speed, cooldownMs, maxRangePx].every(
+        (value) => Number.isFinite(value) && value > 0,
+      )
+    ) {
+      issues.push("projectile configuration has non-positive values");
+    }
+  }
+  if (spec.rush) {
+    if (spec.rush.requiredCollectibles > collectibles.length) {
+      issues.push("rush requires more collectibles than exist in the level");
+    }
+    if (
+      !Number.isFinite(spec.rush.timeLimitSeconds) ||
+      spec.rush.timeLimitSeconds < 20
+    ) {
+      issues.push("rush time limit is too short to be completable");
+    }
+  }
+  if (spec.skyfall) {
+    const { intervalMs, fallSpeed, maxConcurrent } = spec.skyfall;
+    if (intervalMs < 700) issues.push("skyfall interval is unfairly fast");
+    if (fallSpeed <= 0 || fallSpeed > 420) {
+      issues.push("skyfall speed is outside the dodgeable range");
+    }
+    if (maxConcurrent < 1 || maxConcurrent > 8) {
+      issues.push("skyfall concurrency is outside the allowed range");
+    }
+  }
+
   if (
     !Number.isFinite(spec.player.spawnX) ||
     !Number.isFinite(spec.player.spawnY) ||

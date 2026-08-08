@@ -4,8 +4,11 @@ import type {
   EntityVisualKind,
   GameEntitySpec,
 } from "@/game/types";
+import {
+  hasMagicPatternComponent,
+  magicPatternTextureKey,
+} from "@/magic-patterns/registry";
 import { resolveEntityVisual } from "./selectVisual";
-import { drawObjectComponentArt } from "./objectComponentArt";
 
 const INK = 0x1b1b23;
 const PAPER = 0xf8f4e8;
@@ -474,6 +477,77 @@ function drawBattery(
   graphics.strokePath();
 }
 
+function drawDrone(
+  graphics: Phaser.GameObjects.Graphics,
+  width: number,
+  height: number,
+  palette: ThemePalette,
+): void {
+  const line = strokeWidth(width, height);
+  const bodyWidth = width * 0.66;
+  const bodyHeight = height * 0.4;
+  // Rotor arms
+  graphics.lineStyle(Math.max(2, line * 0.8), INK, 0.9);
+  graphics.lineBetween(-width * 0.46, -height * 0.22, -bodyWidth * 0.3, -bodyHeight * 0.2);
+  graphics.lineBetween(width * 0.46, -height * 0.22, bodyWidth * 0.3, -bodyHeight * 0.2);
+  // Rotors
+  for (const rotorX of [-width * 0.46, width * 0.46]) {
+    graphics.fillStyle(mix(palette.hazard, PAPER, 0.55), 0.9);
+    graphics.fillEllipse(rotorX, -height * 0.26, width * 0.34, Math.max(4, height * 0.09));
+    graphics.lineStyle(Math.max(1.5, line * 0.5), INK, 0.9);
+    graphics.strokeEllipse(rotorX, -height * 0.26, width * 0.34, Math.max(4, height * 0.09));
+  }
+  // Body
+  rounded(
+    graphics,
+    -bodyWidth / 2,
+    -bodyHeight / 2,
+    bodyWidth,
+    bodyHeight,
+    Math.min(8, bodyHeight * 0.4),
+    mix(palette.hazard, INK, 0.25),
+    line,
+  );
+  // Eye
+  graphics.fillStyle(RED, 1);
+  graphics.fillCircle(0, 0, Math.max(4, Math.min(width, height) * 0.12));
+  graphics.lineStyle(Math.max(1.5, line * 0.5), INK, 1);
+  graphics.strokeCircle(0, 0, Math.max(4, Math.min(width, height) * 0.12));
+  graphics.fillStyle(PAPER, 0.9);
+  graphics.fillCircle(-1.5, -1.5, Math.max(1.5, Math.min(width, height) * 0.04));
+  // Legs
+  graphics.lineStyle(Math.max(2, line * 0.7), INK, 0.85);
+  graphics.lineBetween(-bodyWidth * 0.3, bodyHeight * 0.5, -bodyWidth * 0.4, height * 0.42);
+  graphics.lineBetween(bodyWidth * 0.3, bodyHeight * 0.5, bodyWidth * 0.4, height * 0.42);
+}
+
+function drawDonut(
+  graphics: Phaser.GameObjects.Graphics,
+  width: number,
+  height: number,
+): void {
+  const radius = Math.min(width, height) * 0.46;
+  const line = strokeWidth(width, height);
+  graphics.fillStyle(0xd9a066, 1);
+  graphics.lineStyle(line, INK, 0.95);
+  graphics.fillCircle(0, 0, radius);
+  graphics.strokeCircle(0, 0, radius);
+  graphics.fillStyle(0xf472b6, 1);
+  graphics.fillCircle(0, -radius * 0.06, radius * 0.82);
+  // Sprinkles
+  graphics.lineStyle(Math.max(1.5, line * 0.55), 0xfef08a, 1);
+  graphics.lineBetween(-radius * 0.45, -radius * 0.35, -radius * 0.3, -radius * 0.5);
+  graphics.lineBetween(radius * 0.3, -radius * 0.45, radius * 0.48, -radius * 0.32);
+  graphics.lineStyle(Math.max(1.5, line * 0.55), 0x7ce7c8, 1);
+  graphics.lineBetween(-radius * 0.5, radius * 0.25, -radius * 0.32, radius * 0.36);
+  graphics.lineBetween(radius * 0.2, radius * 0.42, radius * 0.4, radius * 0.3);
+  // Hole
+  graphics.fillStyle(0xd9a066, 1);
+  graphics.fillCircle(0, 0, radius * 0.3);
+  graphics.lineStyle(Math.max(1.5, line * 0.5), INK, 0.9);
+  graphics.strokeCircle(0, 0, radius * 0.3);
+}
+
 function drawPortal(
   graphics: Phaser.GameObjects.Graphics,
   width: number,
@@ -593,7 +667,154 @@ function drawEntityArt(
     case "exit-door":
       drawExitDoor(graphics, width, height, palette);
       break;
+    case "drone-target":
+      drawDrone(graphics, width, height, palette);
+      break;
+    case "donut":
+      drawDonut(graphics, width, height);
+      break;
   }
+}
+
+const PLATFORM_LIKE = new Set<GameEntitySpec["mechanic"]>([
+  "static_platform",
+  "moving_platform",
+  "bounce_pad",
+]);
+
+/**
+ * Slim, outlined slab drawn at the exact collider size so the standable
+ * surface is always visible underneath aspect-correct object sprites.
+ */
+function drawCollisionSlab(
+  scene: Phaser.Scene,
+  bodyWidth: number,
+  bodyHeight: number,
+  palette: ThemePalette,
+  mechanic: GameEntitySpec["mechanic"],
+): Phaser.GameObjects.Graphics {
+  const graphics = scene.add.graphics();
+  const fill =
+    mechanic === "bounce_pad"
+      ? palette.bouncePad
+      : mechanic === "moving_platform"
+        ? palette.movingPlatform
+        : palette.platform;
+  const line = strokeWidth(bodyWidth, bodyHeight);
+  rounded(
+    graphics,
+    -bodyWidth / 2,
+    -bodyHeight / 2,
+    bodyWidth,
+    bodyHeight,
+    Math.min(8, bodyHeight * 0.3),
+    fill,
+    line,
+  );
+  graphics.fillStyle(mix(fill, PAPER, 0.4), 1);
+  graphics.fillRoundedRect(
+    -bodyWidth / 2 + line,
+    -bodyHeight / 2 + line,
+    bodyWidth - line * 2,
+    Math.max(3, bodyHeight * 0.2),
+    2,
+  );
+  return graphics;
+}
+
+/**
+ * Places the original Magic Patterns SVG art without ever stretching it: the
+ * square source keeps its aspect ratio and is tiled or stacked to cover the
+ * collider instead. Physics geometry is untouched.
+ */
+function createMagicPatternArt(
+  scene: Phaser.Scene,
+  componentId: string | undefined,
+  bodyWidth: number,
+  bodyHeight: number,
+  mechanic: GameEntitySpec["mechanic"],
+): Phaser.GameObjects.Image[] {
+  if (!hasMagicPatternComponent(componentId)) return [];
+  const textureKey = magicPatternTextureKey(componentId);
+  if (!scene.textures.exists(textureKey)) return [];
+
+  const square = (x: number, y: number, side: number) => {
+    const image = scene.add.image(x, y, textureKey);
+    image.setOrigin(0.5, 1);
+    image.setDisplaySize(side, side);
+    return image;
+  };
+
+  if (PLATFORM_LIKE.has(mechanic)) {
+    // Tall colliders (e.g. a bottle tower) become a bottom-aligned stack.
+    if (bodyHeight > bodyWidth * 1.15) {
+      const side = Phaser.Math.Clamp(bodyWidth * 0.92, 36, 130);
+      const count = Phaser.Math.Clamp(Math.floor(bodyHeight / side), 1, 4);
+      return Array.from({ length: count }, (_, index) =>
+        square(0, bodyHeight / 2 - index * side, side),
+      );
+    }
+    // Wide colliders become a row of objects standing on the slab.
+    const side = Phaser.Math.Clamp(
+      Math.min(bodyHeight * 2.6, bodyWidth * 0.96),
+      40,
+      112,
+    );
+    const count = Phaser.Math.Clamp(Math.round(bodyWidth / (side * 1.5)), 1, 5);
+    const step = bodyWidth / (count + 1);
+    return Array.from({ length: count }, (_, index) =>
+      square(-bodyWidth / 2 + step * (index + 1), -bodyHeight / 2 + 2, side),
+    );
+  }
+
+  // Everything else renders one sprite sized to its larger collider side.
+  const side = Phaser.Math.Clamp(Math.max(bodyWidth, bodyHeight), 30, 120);
+  return [square(0, bodyHeight / 2, side)];
+}
+
+/** Standalone sprite for projectiles: exact object art or a drawn donut. */
+export function createProjectileVisual(
+  scene: Phaser.Scene,
+  componentId: string | undefined,
+  size: number,
+): Phaser.GameObjects.Container {
+  const container = scene.add.container(0, 0);
+  if (hasMagicPatternComponent(componentId)) {
+    const textureKey = magicPatternTextureKey(componentId);
+    if (scene.textures.exists(textureKey)) {
+      const image = scene.add.image(0, 0, textureKey);
+      image.setDisplaySize(size, size);
+      container.add(image);
+      return container;
+    }
+  }
+  const graphics = scene.add.graphics();
+  drawDonut(graphics, size, size);
+  container.add(graphics);
+  return container;
+}
+
+/** Standalone sprite for skyfall objects: exact object art or a drawn crate. */
+export function createSkyfallVisual(
+  scene: Phaser.Scene,
+  componentId: string | undefined,
+  size: number,
+  palette: ThemePalette,
+): Phaser.GameObjects.Container {
+  const container = scene.add.container(0, 0);
+  if (componentId && hasMagicPatternComponent(componentId)) {
+    const textureKey = magicPatternTextureKey(componentId);
+    if (scene.textures.exists(textureKey)) {
+      const image = scene.add.image(0, 0, textureKey);
+      image.setDisplaySize(size, size);
+      container.add(image);
+      return container;
+    }
+  }
+  const graphics = scene.add.graphics();
+  drawCrate(graphics, size, size, palette);
+  container.add(graphics);
+  return container;
 }
 
 export function attachEntityArt<T extends RectangleBody>(
@@ -604,20 +825,33 @@ export function attachEntityArt<T extends RectangleBody>(
 ): T & EntityArtCarrier {
   const visual = resolveEntityVisual(entity);
   const art = scene.add.container(bodyObject.x, bodyObject.y);
-  const graphics = scene.add.graphics();
-  const componentLabel = drawObjectComponentArt(
+  const componentImages = createMagicPatternArt(
     scene,
-    graphics,
     visual.componentId,
     bodyObject.width,
     bodyObject.height,
-    palette,
+    entity.mechanic,
   );
-  if (!componentLabel) {
+  if (componentImages.length > 0) {
+    // Exact object art never covers the collider exactly, so platform-like
+    // surfaces get a slab underneath that shows where the player can stand.
+    if (PLATFORM_LIKE.has(entity.mechanic)) {
+      art.add(
+        drawCollisionSlab(
+          scene,
+          bodyObject.width,
+          bodyObject.height,
+          palette,
+          entity.mechanic,
+        ),
+      );
+    }
+    art.add(componentImages);
+  } else {
+    const graphics = scene.add.graphics();
     drawEntityArt(graphics, visual.kind, bodyObject.width, bodyObject.height, palette);
+    art.add(graphics);
   }
-  art.add(graphics);
-  if (componentLabel) art.add(componentLabel);
   art.setDepth(entity.mechanic === "goal" ? 7 : 4);
   bodyObject.setVisible(false);
 
@@ -644,7 +878,7 @@ export function attachEntityArt<T extends RectangleBody>(
   decorated.artLabel = artLabel;
   decorated.visualKind = visual.kind;
   decorated.componentId = visual.componentId;
-  decorated.usesExactObjectArt = Boolean(componentLabel);
+  decorated.usesExactObjectArt = componentImages.length > 0;
   return decorated;
 }
 
@@ -720,6 +954,18 @@ export function animateEntityArt(
       targets: object.art,
       alpha: 0.76,
       duration: 520,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+    return;
+  }
+
+  if (mechanic === "target") {
+    scene.tweens.add({
+      targets: object.art,
+      y: object.y - 6,
+      duration: 750,
       yoyo: true,
       repeat: -1,
       ease: "Sine.easeInOut",
