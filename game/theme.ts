@@ -1,0 +1,78 @@
+export type ThemePalette = {
+  background: number;
+  backgroundAccent: number;
+  ground: number;
+  platform: number;
+  movingPlatform: number;
+  bouncePad: number;
+  hazard: number;
+  collectible: number;
+  portal: number;
+  goal: number;
+  player: number;
+  label: string;
+};
+
+const DEFAULT_PALETTE: ThemePalette = {
+  background: 0x11131c,
+  backgroundAccent: 0x1d2233,
+  ground: 0x3b2f2a,
+  platform: 0xd8c9a3,
+  movingPlatform: 0x8fd4c1,
+  bouncePad: 0xf2a6c0,
+  hazard: 0xe4574f,
+  collectible: 0xf7d060,
+  portal: 0x9d7bf5,
+  goal: 0x63e6a8,
+  player: 0xf5f2e8,
+  label: "#f7f4ea",
+};
+
+const PALETTES: Record<string, Partial<ThemePalette>> = {
+  arcade: {},
+  space: {
+    background: 0x07070f,
+    backgroundAccent: 0x151534,
+    platform: 0xb8c4e8,
+    goal: 0x7ce7ff,
+  },
+  forest: {
+    background: 0x10201a,
+    backgroundAccent: 0x1c3327,
+    ground: 0x24402c,
+    platform: 0xa9d08a,
+    collectible: 0xffe08a,
+  },
+  factory: {
+    background: 0x16171a,
+    backgroundAccent: 0x25272d,
+    platform: 0xb0b4bb,
+    movingPlatform: 0xf0a24b,
+  },
+  neon: {
+    background: 0x0b0a1a,
+    backgroundAccent: 0x1b0f3a,
+    platform: 0x30f2d0,
+    hazard: 0xff2e88,
+    collectible: 0xfaff70,
+    goal: 0x7cf9ff,
+  },
+  paper: {
+    background: 0xf3ece0,
+    backgroundAccent: 0xe6dcc9,
+    ground: 0xcbb99a,
+    platform: 0x8c7a5e,
+    player: 0x2b2b2b,
+    label: "#2b2b2b",
+  },
+  kitchen: {
+    background: 0x1b1614,
+    backgroundAccent: 0x2c231f,
+    platform: 0xe8d5b0,
+    hazard: 0xd94f3d,
+  },
+};
+
+export function paletteForTheme(theme: string): ThemePalette {
+  return { ...DEFAULT_PALETTE, ...(PALETTES[theme] ?? {}) };
+}
