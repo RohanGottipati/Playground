@@ -41,7 +41,7 @@ export default async function HomePage() {
             Turn the stuff on your desk into a real platformer
           </h1>
           <p className="max-w-xl font-body text-base text-paper/80">
-            Snapcade looks at one photo of physical objects and builds a playable 2D
+            Playground looks at one photo of physical objects and builds a playable 2D
             level from what it sees. Every level is checked to be finishable before
             you play it.
           </p>

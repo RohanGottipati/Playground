@@ -1,4 +1,4 @@
-# Snapcade
+# Playground
 
 Arrange physical objects, take one photo, and play the 2D platformer your desk
 becomes — then publish it to a shared public arcade.
@@ -49,7 +49,7 @@ cp .env.example .env.local   # every value is optional for local play
 npm run dev
 ```
 
-Snapcade degrades cleanly:
+Playground degrades cleanly:
 
 - **No Supabase credentials** → games, sessions, events and images live in the
   server process (`lib/db/memory.ts`). The full create → play → publish → arcade

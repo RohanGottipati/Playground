@@ -10,10 +10,10 @@ values (
   '00000000-0000-4000-8000-000000000001',
   'demo-desk-run',
   'Demo Desk Run',
-  'Snapcade',
+  'Playground',
   'published',
   'source-images/demo/original.jpg',
-  'https://placehold.co/1600x900/1d1a26/f6efe2?text=Snapcade+Demo',
+  'https://placehold.co/1600x900/1d1a26/f6efe2?text=Playground+Demo',
   '{"sceneType":"desk","orientation":"landscape","themeSuggestion":"arcade","titleSuggestion":"Demo Desk Run","warnings":[],"objects":[]}'::jsonb,
   '{
     "schemaVersion": 1,
@@ -31,7 +31,7 @@ values (
       { "id": "goal", "mechanic": "goal", "bounds": { "x": 1060, "y": 570, "width": 60, "height": 70 } }
     ],
     "validation": { "reachable": true, "repaired": false, "repairActions": [], "estimatedOptimalTimeSeconds": 14 },
-    "source": { "imageUrl": "https://placehold.co/1600x900/1d1a26/f6efe2?text=Snapcade+Demo", "detectedObjectCount": 4 }
+    "source": { "imageUrl": "https://placehold.co/1600x900/1d1a26/f6efe2?text=Playground+Demo", "detectedObjectCount": 4 }
   }'::jsonb,
   'arcade',
   2,

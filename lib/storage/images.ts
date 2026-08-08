@@ -18,12 +18,12 @@ export const ALLOWED_MIME_TYPES = [
 export type StoredImage = { path: string; url: string };
 
 const memoryImages = globalThis as unknown as {
-  __snapcadeImages?: Map<string, { bytes: Uint8Array; mimeType: string }>;
+  __playgroundImages?: Map<string, { bytes: Uint8Array; mimeType: string }>;
 };
 
 function memoryStore() {
-  if (!memoryImages.__snapcadeImages) memoryImages.__snapcadeImages = new Map();
-  return memoryImages.__snapcadeImages;
+  if (!memoryImages.__playgroundImages) memoryImages.__playgroundImages = new Map();
+  return memoryImages.__playgroundImages;
 }
 
 export function getMemoryImage(gameId: string) {

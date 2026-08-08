@@ -23,7 +23,7 @@ export function GameResults({
     if (!shareUrl) return;
     try {
       if (navigator.share) {
-        await navigator.share({ title: "Snapcade", url: shareUrl });
+        await navigator.share({ title: "Playground", url: shareUrl });
         return;
       }
       await navigator.clipboard.writeText(shareUrl);

@@ -2,7 +2,7 @@
 
 import type { GameEventType } from "@/game/types";
 
-const SESSION_STORAGE_KEY = "snapcade.anonymousSessionId";
+const SESSION_STORAGE_KEY = "playground.anonymousSessionId";
 
 export function anonymousSessionId(): string {
   if (typeof window === "undefined") return "server";

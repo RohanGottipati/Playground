@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { CreateFlow } from "@/components/create/CreateFlow";
 
 export const metadata: Metadata = {
-  title: "Make a game — Snapcade",
+  title: "Make a game — Playground",
   description: "Take one photo of real objects and get a playable platformer.",
 };
 

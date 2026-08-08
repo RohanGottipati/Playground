@@ -16,11 +16,11 @@ const body = Rubik({
 });
 
 export const metadata: Metadata = {
-  title: "Snapcade — Arrange. Snap. Play. Publish.",
+  title: "Playground — Arrange. Snap. Play. Publish.",
   description:
     "Arrange physical objects, take one photo, and play the platformer your desk becomes.",
   openGraph: {
-    title: "Snapcade",
+    title: "Playground",
     description:
       "Turn a photo of real objects into a playable platformer, then publish it to a shared arcade.",
     type: "website",
@@ -41,7 +41,7 @@ export default function RootLayout({
             className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3"
           >
             <Link href="/" className="marquee-title text-xl text-marquee">
-              Snapcade
+              Playground
             </Link>
             <div className="flex items-center gap-2">
               <Link href="/arcade" className="btn-ghost px-3 py-2 text-xs">
@@ -61,7 +61,7 @@ export default function RootLayout({
 
         <footer className="border-t-[3px] border-ink bg-cabinet/80 px-4 py-6">
           <p className="mx-auto max-w-6xl font-mono text-[11px] uppercase text-paper/50">
-            Snapcade · one photo becomes one level · photos on published games are
+            Playground · one photo becomes one level · photos on published games are
             public
           </p>
         </footer>

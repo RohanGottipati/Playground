@@ -5,8 +5,8 @@ import { repository } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Stats — Snapcade",
-  description: "Real numbers from every game generated and played in Snapcade.",
+  title: "Stats — Playground",
+  description: "Real numbers from every game generated and played in Playground.",
 };
 
 export default async function StatsPage() {

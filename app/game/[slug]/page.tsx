@@ -13,10 +13,10 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const game = await repository().getGameBySlug(slug);
-  if (!game) return { title: "Game not found — Snapcade" };
+  if (!game) return { title: "Game not found — Playground" };
 
   return {
-    title: `${game.title} — Snapcade`,
+    title: `${game.title} — Playground`,
     description: `A platformer generated from ${game.detectedObjectCount} real objects photographed by ${game.creatorName}.`,
     openGraph: {
       title: game.title,

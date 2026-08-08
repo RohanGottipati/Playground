@@ -2,9 +2,9 @@
  * Prompts are versioned in source control. Bump PROMPT_VERSION on any change so
  * stored generation metadata stays meaningful.
  */
-export const PROMPT_VERSION = "1";
+export const PROMPT_VERSION = "2";
 
-export const SYSTEM_PROMPT = `You are the visual scene analyst for Snapcade, a platform that turns a
+export const SYSTEM_PROMPT = `You are the visual scene analyst for Playground, a platform that turns a
 single photograph of arranged physical objects into a 2D platformer.
 
 Your task is to identify clearly visible physical objects, estimate their

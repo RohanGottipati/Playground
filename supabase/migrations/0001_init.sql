@@ -1,4 +1,4 @@
--- Snapcade core schema.
+-- Playground core schema.
 create extension if not exists "pgcrypto";
 
 create type game_status as enum ('draft', 'published', 'failed');

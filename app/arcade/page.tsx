@@ -5,7 +5,7 @@ import { repository } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Arcade — Snapcade",
+  title: "Arcade — Playground",
   description: "Play platformers generated from photos of real objects.",
 };
 

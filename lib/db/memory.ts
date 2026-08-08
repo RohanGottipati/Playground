@@ -29,12 +29,12 @@ type MemoryState = {
 };
 
 const globalState = globalThis as unknown as {
-  __snapcadeMemoryState?: MemoryState;
+  __playgroundMemoryState?: MemoryState;
 };
 
 function state(): MemoryState {
-  if (!globalState.__snapcadeMemoryState) {
-    globalState.__snapcadeMemoryState = {
+  if (!globalState.__playgroundMemoryState) {
+    globalState.__playgroundMemoryState = {
       games: new Map(),
       objects: [],
       sessions: new Map(),
@@ -44,11 +44,11 @@ function state(): MemoryState {
       eventId: 1,
     };
   }
-  return globalState.__snapcadeMemoryState;
+  return globalState.__playgroundMemoryState;
 }
 
 export function resetMemoryState(): void {
-  globalState.__snapcadeMemoryState = undefined;
+  globalState.__playgroundMemoryState = undefined;
 }
 
 /**

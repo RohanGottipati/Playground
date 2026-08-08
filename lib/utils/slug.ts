@@ -16,7 +16,7 @@ export function slugifyTitle(title: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);
-  return base.length >= 3 ? base : "snapcade-game";
+  return base.length >= 3 ? base : "playground-game";
 }
 
 function suffix(seed: number): string {

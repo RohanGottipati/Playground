@@ -34,7 +34,7 @@ export async function compressImage(file: File): Promise<File> {
     });
     if (!blob) return file;
 
-    return new File([blob], "snapcade-photo.jpg", { type: "image/jpeg" });
+    return new File([blob], "playground-photo.jpg", { type: "image/jpeg" });
   } catch (error) {
     console.warn("image compression failed, using original", error);
     return file;
