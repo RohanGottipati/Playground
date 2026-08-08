@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Space_Grotesk, Rubik } from "next/font/google";
+import { Space_Grotesk, Rubik, Fraunces } from "next/font/google";
 import "./globals.css";
 import { BackgroundVideo } from "@/components/ui/BackgroundVideo";
+import { NavPill } from "@/components/layout/NavPill";
 
 const display = Space_Grotesk({
   subsets: ["latin"],
@@ -14,6 +14,13 @@ const body = Rubik({
   subsets: ["latin"],
   weight: ["400", "500"],
   variable: "--font-body",
+});
+
+const serif = Fraunces({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  style: ["normal", "italic"],
+  variable: "--font-serif",
 });
 
 export const metadata: Metadata = {
@@ -34,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${display.variable} ${body.variable} min-h-dvh font-body antialiased`}
+        className={`${display.variable} ${body.variable} ${serif.variable} min-h-dvh font-body antialiased`}
       >
         <div className="fixed inset-0 -z-10 overflow-hidden">
           <BackgroundVideo
@@ -42,39 +49,14 @@ export default function RootLayout({
             poster="/playground-bg-poster.jpg"
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-ink/65" />
+          <div className="absolute inset-0 bg-ink/40" />
         </div>
 
-        <header className="border-b-[3px] border-ink bg-cabinet/80">
-          <nav
-            aria-label="Main"
-            className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3"
-          >
-            <Link href="/" className="marquee-title text-xl text-marquee">
-              Playground
-            </Link>
-            <div className="flex items-center gap-2">
-              <Link href="/arcade" className="btn-ghost px-3 py-2 text-xs">
-                Arcade
-              </Link>
-              <Link href="/stats" className="btn-ghost px-3 py-2 text-xs">
-                Stats
-              </Link>
-              <Link href="/create" className="btn-primary px-3 py-2 text-xs">
-                Make a game
-              </Link>
-            </div>
-          </nav>
-        </header>
+        <div className="fixed inset-x-0 top-4 z-20 flex justify-center px-4">
+          <NavPill />
+        </div>
 
-        <main className="mx-auto w-full max-w-6xl px-4 py-8">{children}</main>
-
-        <footer className="border-t-[3px] border-ink bg-cabinet/80 px-4 py-6">
-          <p className="mx-auto max-w-6xl font-mono text-[11px] uppercase text-paper/50">
-            Playground · one photo becomes one level · photos on published games are
-            public
-          </p>
-        </footer>
+        <main className="mx-auto w-full max-w-6xl px-4 pb-8 pt-24">{children}</main>
       </body>
     </html>
   );
