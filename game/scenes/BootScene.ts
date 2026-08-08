@@ -20,6 +20,12 @@ export class BootScene extends Phaser.Scene {
     const componentIds = new Set(
       spec.entities.map((entity) => resolveEntityVisual(entity).componentId),
     );
+    if (spec.projectile?.componentId) {
+      componentIds.add(spec.projectile.componentId);
+    }
+    for (const componentId of spec.skyfall?.componentIds ?? []) {
+      componentIds.add(componentId);
+    }
     for (const componentId of componentIds) {
       if (!componentId) continue;
       const textureKey = magicPatternTextureKey(componentId);

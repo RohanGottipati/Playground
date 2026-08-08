@@ -21,6 +21,7 @@ const MECHANIC_DISCOVERY: Record<MechanicType, string> = {
   hazard: "hazard",
   collectible: "collecting",
   portal: "portal",
+  target: "sharpshooting",
   goal: "goal",
 };
 

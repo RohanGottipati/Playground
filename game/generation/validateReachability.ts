@@ -90,7 +90,8 @@ export function canJump(a: PlatformNode, b: PlatformNode): boolean {
   const gap = horizontalGap(a, b);
   const upwardDelta = a.top - b.top; // positive when b is higher
   const bounce = a.mechanic === "bounce_pad";
-  const maxUp = bounce ? SAFE_MAX_UPWARD_DELTA * 2.6 : SAFE_MAX_UPWARD_DELTA;
+  // 2.2 × 104 ≈ 229px, safely inside the ~290px bounce apex.
+  const maxUp = bounce ? SAFE_MAX_UPWARD_DELTA * 2.2 : SAFE_MAX_UPWARD_DELTA;
 
   if (upwardDelta > 0) {
     if (upwardDelta > maxUp) return false;

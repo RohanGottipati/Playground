@@ -5,6 +5,7 @@ export type ErrorCode =
   | "BACKBOARD_INVALID_RESPONSE"
   | "BACKBOARD_CONFIGURATION_ERROR"
   | "BACKBOARD_UNAVAILABLE"
+  | "MAGIC_PATTERNS_UNAVAILABLE"
   | "SCHEMA_VALIDATION_FAILED"
   | "LEVEL_GENERATION_FAILED"
   | "LEVEL_UNREACHABLE"
@@ -20,6 +21,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   BACKBOARD_INVALID_RESPONSE: 502,
   BACKBOARD_CONFIGURATION_ERROR: 503,
   BACKBOARD_UNAVAILABLE: 502,
+  MAGIC_PATTERNS_UNAVAILABLE: 502,
   SCHEMA_VALIDATION_FAILED: 422,
   LEVEL_GENERATION_FAILED: 500,
   LEVEL_UNREACHABLE: 500,
@@ -42,6 +44,8 @@ const USER_MESSAGE_BY_CODE: Record<ErrorCode, string> = {
     "Photo analysis is temporarily unavailable. Please try again later.",
   BACKBOARD_UNAVAILABLE:
     "Photo analysis is temporarily unavailable. Try again in a moment.",
+  MAGIC_PATTERNS_UNAVAILABLE:
+    "The design service is temporarily unavailable. Your game still generated with the built-in art style.",
   SCHEMA_VALIDATION_FAILED:
     "We could not find a clear object. Try using a well-lit photo with the object fully in frame.",
   LEVEL_GENERATION_FAILED:
@@ -61,6 +65,7 @@ const RETRYABLE_BY_CODE: Record<ErrorCode, boolean> = {
   BACKBOARD_INVALID_RESPONSE: true,
   BACKBOARD_CONFIGURATION_ERROR: false,
   BACKBOARD_UNAVAILABLE: true,
+  MAGIC_PATTERNS_UNAVAILABLE: true,
   SCHEMA_VALIDATION_FAILED: false,
   LEVEL_GENERATION_FAILED: false,
   LEVEL_UNREACHABLE: false,

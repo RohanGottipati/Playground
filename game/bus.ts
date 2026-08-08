@@ -5,6 +5,13 @@ export type HudState = {
   deaths: number;
   collectibles: number;
   totalCollectibles: number;
+  /** Drones still alive; only present in shooter mode. */
+  targetsLeft?: number;
+  totalTargets?: number;
+  /** Countdown for rush mode, in milliseconds. */
+  timeLeftMs?: number;
+  /** True while the exit door is still locked by the mode objective. */
+  goalLocked?: boolean;
 };
 
 export type RunResult = {
@@ -12,6 +19,7 @@ export type RunResult = {
   deaths: number;
   collectibles: number;
   totalCollectibles: number;
+  targetsDestroyed?: number;
 };
 
 export type BusEvents = {
@@ -55,8 +63,21 @@ export type ControlState = {
   right: boolean;
   jump: boolean;
   restart: boolean;
+  shoot: boolean;
+  /**
+   * Gate flipped by the rules popup. The scene idles (physics paused, timer
+   * stopped) until the player has read the rules and pressed start.
+   */
+  started: boolean;
 };
 
 export function createControlState(): ControlState {
-  return { left: false, right: false, jump: false, restart: false };
+  return {
+    left: false,
+    right: false,
+    jump: false,
+    restart: false,
+    shoot: false,
+    started: false,
+  };
 }

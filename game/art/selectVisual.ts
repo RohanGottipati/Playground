@@ -118,6 +118,9 @@ export function selectEntityVisualKind(entity: GameEntitySpec): EntityVisualKind
     case "portal":
       return "portal-gate";
 
+    case "target":
+      return "drone-target";
+
     case "goal":
       return "exit-door";
   }
@@ -128,6 +131,10 @@ export function resolveEntityVisual(entity: GameEntitySpec): EntityVisualSpec {
   const kind = isEntityVisualKind(stored)
     ? stored
     : selectEntityVisualKind(entity);
+  // Generated drone targets always use the built-in drawn art.
+  if (entity.mechanic === "target") {
+    return { kind: "drone-target" };
+  }
   const storedComponentId = entity.visual?.componentId;
   return {
     kind,
