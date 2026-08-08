@@ -60,7 +60,8 @@ export function PhaserCanvas({ spec, onBus }: PhaserCanvasProps) {
     <div
       ref={containerRef}
       aria-label={`Playable level: ${spec.title}`}
-      className="aspect-[16/9] w-full overflow-hidden rounded-2xl border-[3px] border-ink bg-black shadow-sticker"
+      // touch-none: gameplay taps must not trigger browser double-tap/pinch zoom.
+      className="aspect-[16/9] w-full touch-none overflow-hidden rounded-2xl border-[3px] border-ink bg-black shadow-sticker [&>canvas]:touch-none"
     />
   );
 }

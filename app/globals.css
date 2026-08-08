@@ -35,7 +35,7 @@ body {
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border-[3px] border-ink px-5 py-3
+    @apply inline-flex touch-manipulation items-center justify-center gap-2 rounded-xl border-[3px] border-ink px-5 py-3
       font-display text-base uppercase tracking-wide shadow-sticker transition
       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
       focus-visible:outline-token disabled:cursor-not-allowed disabled:opacity-60;

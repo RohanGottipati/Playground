@@ -17,18 +17,20 @@ function holdHandlers(
   return {
     onPointerDown: (event: React.PointerEvent) => {
       event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
       set(true);
     },
     onPointerUp: () => set(false),
-    onPointerLeave: () => set(false),
     onPointerCancel: () => set(false),
+    onLostPointerCapture: () => set(false),
   };
 }
 
 /** Always-visible touch controls: the game must be playable on a phone. */
 export function TouchControls({ controls, onRestart }: Props) {
   return (
-    <div className="flex select-none items-center justify-between gap-3 md:hidden">
+    // touch-none: repeated taps while playing must not zoom the browser.
+    <div className="flex touch-none select-none items-center justify-between gap-3 md:hidden">
       <div className="flex gap-3">
         <button
           type="button"
