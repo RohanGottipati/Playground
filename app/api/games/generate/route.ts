@@ -57,7 +57,6 @@ export async function POST(request: Request) {
       image: bytes,
       fileName: `${gameId}.jpg`,
       mimeType,
-      seed: gameId,
     });
 
     const spec = generateLevel(analysis, { imageUrl });
@@ -96,7 +95,7 @@ export async function POST(request: Request) {
 
     await db.recordEvent({
       gameId,
-      eventType: metadata.fallbackUsed ? "generation_failed" : "generation_completed",
+      eventType: "generation_completed",
       payload: {
         label: spec.title,
         attempts: metadata.attemptCount,
@@ -121,7 +120,6 @@ export async function POST(request: Request) {
       generationMetadata: {
         latencyMs: metadata.latencyMs,
         attempts: metadata.attemptCount,
-        fallbackUsed: metadata.fallbackUsed,
         status: metadata.status,
         warnings: metadata.warnings,
         provider: metadata.llmProvider ?? null,

@@ -9,17 +9,20 @@ No prompts, no tile editors, no level-design knowledge, no account.
 
 ## How it works
 
-1. `/create` takes one photo (camera on mobile, file picker on desktop) and
-   compresses it in the browser.
-2. `POST /api/uploads` validates and stores the photo (Supabase Storage, or an
-   in-process store locally).
-3. `POST /api/games/generate` sends the image to **Backboard** with a strict
-   JSON-only prompt. The response is extracted, `zod`-validated, and retried up
-   to three times (the third attempt uses the fallback model). If every attempt
-   fails, a deterministic fallback scene is used and the user is told.
+1. `/create` takes one photo containing one or more visible objects (camera on
+   mobile, file picker on desktop) and compresses it in the browser.
+2. `POST /api/uploads` validates, rotates and normalizes the photo to JPEG, then
+   stores it (Supabase Storage, or an in-process store locally).
+3. `POST /api/games/generate` sends the image to **Backboard GPT-4o** with a
+   strict JSON-only prompt. The response is extracted, `zod`-validated, and
+   transient failures are retried up to three times without changing models.
+   Authentication, billing and model configuration failures stop with an
+   actionable error; an unrelated fallback scene is never substituted.
 4. Detected objects are clamped, deduplicated and mapped to mechanics
    deterministically — the model never controls physics or playability.
-5. The level is generated, its reachability graph is BFS-checked from the spawn,
+5. Sparse photos receive only the neutral helper platforms needed for a short
+   playable route. The level is generated, its reachability graph is BFS-checked
+   from the spawn,
    and unreachable routes are repaired in a least-invasive order (widen → move →
    make moving → bounce pad → add up to three helper platforms). Every repair is
    recorded in `gameSpec.validation.repairActions`.
@@ -47,17 +50,17 @@ No prompts, no tile editors, no level-design knowledge, no account.
 
 ```bash
 npm install
-cp .env.example .env.local   # every value is optional for local play
+cp .env.example .env.local
 npm run dev
 ```
 
-Playground degrades cleanly:
+Playground degrades cleanly when persistence is not configured:
 
 - **No Supabase credentials** → games, sessions, events and images live in the
   server process (`lib/db/memory.ts`). The full create → play → publish → arcade
   → stats loop works, but data resets on restart.
-- **No Backboard credentials** → `lib/backboard/fallbackAnalysis.ts` produces a
-  deterministic five-object scene so the pipeline is still exercised end to end.
+- **No Backboard credentials or chat entitlement** → photo analysis stops with
+  a clear error and never claims a sample level came from the uploaded image.
 
 ### Environment variables
 
@@ -117,7 +120,7 @@ app/                    routes and API handlers
 components/             UI: create flow, arcade, game shell, stats charts
 game/                   engine-agnostic domain + Phaser scenes/entities
   generation/           normalize → assign mechanics → repair → validate → spec
-lib/backboard/          prompts, HTTP client, JSON parsing, fallback
+lib/backboard/          prompts, GPT-4o HTTP client and JSON parsing
 lib/db/                 repository interface, memory and Supabase implementations
 lib/analytics/          event schemas and client-side tracking
 supabase/               migrations and seed
@@ -128,6 +131,7 @@ tests/                  vitest suites and fixed scene fixtures
 
 - The AI returns **JSON only**; it never emits code, physics values or level
   geometry decisions.
+- Every Backboard attempt is pinned to `openai/gpt-4o`.
 - Everything after the AI boundary is deterministic: the same scene analysis
   always produces the same `GameSpec`.
 - A level is only playable after `collectSafetyIssues()` reports no problems.

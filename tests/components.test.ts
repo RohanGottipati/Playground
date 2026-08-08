@@ -84,9 +84,14 @@ describe("component catalog", () => {
     expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"');
     expect(svg).toContain(fill);
     expect(svg).toContain("</svg>");
-    expect(magicPatternSvgDataUri(componentId)).toMatch(
-      /^data:image\/svg\+xml;charset=utf-8,/,
+    const dataUri = magicPatternSvgDataUri(componentId);
+    expect(dataUri).toMatch(/^data:image\/svg\+xml;base64,/);
+    // Phaser decodes data URIs with atob, so the payload must round-trip.
+    const base64 = dataUri!.slice("data:image/svg+xml;base64,".length);
+    const decoded = new TextDecoder().decode(
+      Uint8Array.from(atob(base64), (char) => char.charCodeAt(0)),
     );
+    expect(decoded).toBe(svg);
   });
 });
 

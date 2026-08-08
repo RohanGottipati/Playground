@@ -5,6 +5,7 @@ import {
   GRAVITY_Y,
   GROUND_TOP,
   JUMP_VELOCITY,
+  MIN_PLATFORM_HEIGHT,
   MOVE_SPEED,
   PLAYER_HEIGHT,
   WORLD_HEIGHT,
@@ -59,6 +60,7 @@ export function generateLevel(
   let entities = assignMechanics(objects);
   entities = clearSpawnArea(entities, repairActions);
   entities = liftCollectiblesOutOfPlatforms(entities);
+  entities = ensureSparseCourse(entities, repairActions);
 
   const repair = repairLevel(entities);
   entities = repair.entities;
@@ -112,6 +114,63 @@ export function generateLevel(
 
   assertSpecIsSafe(spec);
   return spec;
+}
+
+const MIN_COURSE_PLATFORMS = 2;
+const SPARSE_HELPER_PAIRS: Rect[][] = [
+  [
+    { x: 300, y: GROUND_TOP - 120, width: 180, height: MIN_PLATFORM_HEIGHT },
+    { x: 540, y: GROUND_TOP - 240, width: 180, height: MIN_PLATFORM_HEIGHT },
+  ],
+  [
+    { x: 880, y: GROUND_TOP - 120, width: 180, height: MIN_PLATFORM_HEIGHT },
+    { x: 1120, y: GROUND_TOP - 240, width: 180, height: MIN_PLATFORM_HEIGHT },
+  ],
+];
+
+/**
+ * A single photographed object is a valid input. Add neutral scaffolding only
+ * when the detected mechanics cannot provide a short platforming route alone.
+ */
+function ensureSparseCourse(
+  input: GameEntitySpec[],
+  actions: string[],
+): GameEntitySpec[] {
+  const standableCount = input.filter(isStandable).length;
+  const needed = Math.max(0, MIN_COURSE_PLATFORMS - standableCount);
+  if (needed === 0) return input;
+
+  const availablePair =
+    SPARSE_HELPER_PAIRS.find((pair) =>
+      pair.every((bounds) =>
+        input.every((entity) => !overlaps(bounds, padded(entity.bounds, 18))),
+      ),
+    ) ?? SPARSE_HELPER_PAIRS[0];
+
+  const helpers = availablePair.slice(0, needed).map((bounds, index) => ({
+    id: `sparse-helper-${index + 1}`,
+    mechanic: "static_platform" as const,
+    bounds: { ...bounds },
+    metadata: {
+      generated: true,
+      role: "helper",
+      sparseCourse: true,
+    },
+  }));
+
+  actions.push(
+    `Added ${helpers.length} helper platform${helpers.length === 1 ? "" : "s"} for a sparse photo`,
+  );
+  return [...input, ...helpers];
+}
+
+function padded(bounds: Rect, amount: number): Rect {
+  return {
+    x: bounds.x - amount,
+    y: bounds.y - amount,
+    width: bounds.width + amount * 2,
+    height: bounds.height + amount * 2,
+  };
 }
 
 /** Hazards must never sit on top of the spawn point. */

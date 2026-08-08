@@ -71,7 +71,7 @@ export const SceneAnalysisSchema = z.object({
     "kitchen",
     "default",
   ]),
-  objects: z.array(DetectedObjectSchema).min(2).max(15),
+  objects: z.array(DetectedObjectSchema).min(1).max(15),
   warnings: z.array(z.string()).max(6),
 });
 

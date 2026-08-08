@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 const STEPS = [
   {
     title: "Arrange",
-    body: "Put 3–8 everyday objects on a desk or floor with space between them.",
+    body: "Photograph one object or arrange several with space between them.",
   },
   {
     title: "Snap",

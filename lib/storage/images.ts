@@ -4,8 +4,11 @@ import {
   supabaseAdmin,
 } from "@/lib/supabase/admin";
 import { AppError } from "@/lib/errors/AppError";
+import sharp from "sharp";
 
 export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+export const MAX_IMAGE_DIMENSION = 1600;
+export const NORMALIZED_IMAGE_MIME_TYPE = "image/jpeg";
 
 export const ALLOWED_MIME_TYPES = [
   "image/jpeg",
@@ -16,6 +19,10 @@ export const ALLOWED_MIME_TYPES = [
 ];
 
 export type StoredImage = { path: string; url: string };
+export type NormalizedImage = {
+  bytes: Uint8Array;
+  mimeType: typeof NORMALIZED_IMAGE_MIME_TYPE;
+};
 
 const memoryImages = globalThis as unknown as {
   __playgroundImages?: Map<string, { bytes: Uint8Array; mimeType: string }>;
@@ -43,6 +50,46 @@ export function validateImage(file: File): void {
   }
   if (file.size <= 0 || file.size > MAX_UPLOAD_BYTES) {
     throw new AppError("INVALID_IMAGE", `unsupported size ${file.size}`);
+  }
+}
+
+/**
+ * Decodes every accepted camera format, applies EXIF orientation, removes
+ * metadata and emits one Backboard-compatible JPEG representation.
+ */
+export async function normalizeSourceImage(
+  bytes: Uint8Array,
+): Promise<NormalizedImage> {
+  try {
+    const output = await sharp(bytes, {
+      failOn: "error",
+      limitInputPixels: 40_000_000,
+    })
+      .rotate()
+      .resize({
+        width: MAX_IMAGE_DIMENSION,
+        height: MAX_IMAGE_DIMENSION,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .flatten({ background: "#ffffff" })
+      .toColourspace("srgb")
+      .jpeg({ quality: 88, chromaSubsampling: "4:4:4" })
+      .toBuffer();
+
+    if (output.byteLength <= 0 || output.byteLength > MAX_UPLOAD_BYTES) {
+      throw new Error(`normalized image has unsupported size ${output.byteLength}`);
+    }
+
+    return {
+      bytes: new Uint8Array(output),
+      mimeType: NORMALIZED_IMAGE_MIME_TYPE,
+    };
+  } catch (error) {
+    throw new AppError(
+      "INVALID_IMAGE",
+      error instanceof Error ? `image decode failed: ${error.message}` : "image decode failed",
+    );
   }
 }
 

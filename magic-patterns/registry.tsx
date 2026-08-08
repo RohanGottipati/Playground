@@ -35,11 +35,22 @@ export function renderMagicPatternSvg(
     : markup;
 }
 
+/**
+ * Phaser's loader treats every `data:` URL as base64 (File#base64) and decodes
+ * it with `atob`, so SVG data URIs must be base64-encoded, not URL-encoded.
+ */
+function svgToBase64(svg: string): string {
+  const bytes = new TextEncoder().encode(svg);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
 export function magicPatternSvgDataUri(
   componentId: string | undefined,
 ): string | undefined {
   const svg = renderMagicPatternSvg(componentId);
-  return svg
-    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
-    : undefined;
+  return svg ? `data:image/svg+xml;base64,${svgToBase64(svg)}` : undefined;
 }
