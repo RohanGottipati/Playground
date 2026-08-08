@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Space_Grotesk, Rubik } from "next/font/google";
 import "./globals.css";
+import { BackgroundVideo } from "@/components/ui/BackgroundVideo";
 
 const display = Space_Grotesk({
   subsets: ["latin"],
@@ -35,6 +36,15 @@ export default function RootLayout({
       <body
         className={`${display.variable} ${body.variable} min-h-dvh font-body antialiased`}
       >
+        <div className="fixed inset-0 -z-10 overflow-hidden">
+          <BackgroundVideo
+            src="/playground-bg.mp4"
+            poster="/playground-bg-poster.jpg"
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-ink/65" />
+        </div>
+
         <header className="border-b-[3px] border-ink bg-cabinet/80">
           <nav
             aria-label="Main"
