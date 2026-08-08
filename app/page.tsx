@@ -1,19 +1,14 @@
-import Link from "next/link";
 import { HeroTitle } from "@/components/home/HeroTitle";
+import { EmailCapture } from "@/components/home/EmailCapture";
 
 export default function HomePage() {
   return (
-    <section className="flex min-h-[75vh] flex-col">
-      <div className="flex flex-1 flex-col items-center justify-center text-center">
+    <section className="relative min-h-[85vh]">
+      <div className="absolute inset-0 flex -translate-y-12 flex-col items-center justify-center text-center">
         <HeroTitle />
       </div>
-      <div className="mt-24 flex flex-wrap justify-center gap-3">
-        <Link href="/create" className="btn-glass-primary">
-          Make a game from a photo
-        </Link>
-        <Link href="/arcade" className="btn-glass-secondary">
-          Play the arcade
-        </Link>
+      <div className="absolute inset-x-0 bottom-8 flex justify-center">
+        <EmailCapture />
       </div>
     </section>
   );
