@@ -4,8 +4,11 @@ import type {
   EntityVisualKind,
   GameEntitySpec,
 } from "@/game/types";
+import {
+  hasMagicPatternComponent,
+  magicPatternTextureKey,
+} from "@/magic-patterns/registry";
 import { resolveEntityVisual } from "./selectVisual";
-import { drawObjectComponentArt } from "./objectComponentArt";
 
 const INK = 0x1b1b23;
 const PAPER = 0xf8f4e8;
@@ -596,6 +599,33 @@ function drawEntityArt(
   }
 }
 
+/**
+ * Places the original Magic Patterns SVG above the unchanged physics body.
+ * The square source canvas is sized to the detected object's collider so wide
+ * platforms stay readable without changing collision behavior.
+ */
+function createMagicPatternArt(
+  scene: Phaser.Scene,
+  componentId: string | undefined,
+  bodyWidth: number,
+  bodyHeight: number,
+): Phaser.GameObjects.Image | undefined {
+  if (!hasMagicPatternComponent(componentId)) return undefined;
+  const textureKey = magicPatternTextureKey(componentId);
+  if (!scene.textures.exists(textureKey)) return undefined;
+
+  const width = Phaser.Math.Clamp(bodyWidth * 0.96, 28, 600);
+  const height = Phaser.Math.Clamp(
+    Math.max(bodyHeight, Math.min(width * 0.64, 240)),
+    28,
+    320,
+  );
+  const image = scene.add.image(0, bodyHeight / 2, textureKey);
+  image.setOrigin(0.5, 1);
+  image.setDisplaySize(width, height);
+  return image;
+}
+
 export function attachEntityArt<T extends RectangleBody>(
   scene: Phaser.Scene,
   bodyObject: T,
@@ -604,20 +634,19 @@ export function attachEntityArt<T extends RectangleBody>(
 ): T & EntityArtCarrier {
   const visual = resolveEntityVisual(entity);
   const art = scene.add.container(bodyObject.x, bodyObject.y);
-  const graphics = scene.add.graphics();
-  const componentLabel = drawObjectComponentArt(
+  const componentImage = createMagicPatternArt(
     scene,
-    graphics,
     visual.componentId,
     bodyObject.width,
     bodyObject.height,
-    palette,
   );
-  if (!componentLabel) {
+  if (componentImage) {
+    art.add(componentImage);
+  } else {
+    const graphics = scene.add.graphics();
     drawEntityArt(graphics, visual.kind, bodyObject.width, bodyObject.height, palette);
+    art.add(graphics);
   }
-  art.add(graphics);
-  if (componentLabel) art.add(componentLabel);
   art.setDepth(entity.mechanic === "goal" ? 7 : 4);
   bodyObject.setVisible(false);
 
@@ -644,7 +673,7 @@ export function attachEntityArt<T extends RectangleBody>(
   decorated.artLabel = artLabel;
   decorated.visualKind = visual.kind;
   decorated.componentId = visual.componentId;
-  decorated.usesExactObjectArt = Boolean(componentLabel);
+  decorated.usesExactObjectArt = Boolean(componentImage);
   return decorated;
 }
 

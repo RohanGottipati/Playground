@@ -30,10 +30,9 @@ export async function createGame(
 
   const bus = new GameBus();
   const controls = createControlState();
-  const game = new Phaser.Game(buildPhaserConfig(parent, spec));
-  game.registry.set("spec", spec);
-  game.registry.set("bus", bus);
-  game.registry.set("controls", controls);
+  const game = new Phaser.Game(
+    buildPhaserConfig(parent, spec, bus, controls),
+  );
 
   // The keyboard manager listens on `window`, so without this, WASD / space /
   // R / arrows fire into the game (and get preventDefault'd, breaking typing)

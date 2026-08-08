@@ -7,9 +7,10 @@ import {
 } from "@/game/components/catalog";
 import { selectComponentForEntity } from "@/game/components/selectComponent";
 import {
-  EXACT_OBJECT_COMPONENT_IDS,
-  objectArtDescriptor,
-} from "@/game/art/objectArtDescriptor";
+  MAGIC_PATTERN_COMPONENT_IDS,
+  magicPatternSvgDataUri,
+  renderMagicPatternSvg,
+} from "@/magic-patterns/registry";
 import type {
   EntityVisualKind,
   GameEntitySpec,
@@ -63,14 +64,29 @@ describe("component catalog", () => {
     ).toBe(true);
   });
 
-  it("has an exact art descriptor for every everyday-object component", () => {
-    expect(EXACT_OBJECT_COMPONENT_IDS).toHaveLength(211);
-    for (const componentId of EXACT_OBJECT_COMPONENT_IDS) {
-      const descriptor = objectArtDescriptor(componentId);
-      expect(descriptor?.componentId).toBe(componentId);
-      expect(descriptor?.rendererKey).toBe(`object.${componentId}`);
-      expect(descriptor?.name.length).toBeGreaterThan(0);
-    }
+  it("maps every database object ID to one unique Magic Patterns component", () => {
+    const databaseObjectIds = COMPONENT_CATALOG
+      .filter((entry) => entry.metadata.componentType === "object-sprite")
+      .map((entry) => entry.id)
+      .sort();
+    expect(MAGIC_PATTERN_COMPONENT_IDS).toHaveLength(211);
+    expect(new Set(MAGIC_PATTERN_COMPONENT_IDS).size).toBe(211);
+    expect([...MAGIC_PATTERN_COMPONENT_IDS].sort()).toEqual(databaseObjectIds);
+  });
+
+  it.each([
+    ["fur-sofa", "#0d9488"],
+    ["kit-kettle", "#94a3b8"],
+    ["food-donut", "#f472b6"],
+  ])("renders the real %s React component as SVG", (componentId, fill) => {
+    const svg = renderMagicPatternSvg(componentId);
+    expect(svg).toMatch(/^<svg\b/);
+    expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"');
+    expect(svg).toContain(fill);
+    expect(svg).toContain("</svg>");
+    expect(magicPatternSvgDataUri(componentId)).toMatch(
+      /^data:image\/svg\+xml;charset=utf-8,/,
+    );
   });
 });
 

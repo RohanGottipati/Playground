@@ -1,11 +1,34 @@
 import * as Phaser from "phaser";
 import type { GameBus } from "@/game/bus";
+import { resolveEntityVisual } from "@/game/art/selectVisual";
 import { collectSafetyIssues } from "@/game/generation/runtimeSafety";
 import type { GameSpec } from "@/game/types";
+import {
+  magicPatternSvgDataUri,
+  magicPatternTextureKey,
+} from "@/magic-patterns/registry";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
     super("BootScene");
+  }
+
+  preload() {
+    const spec = this.registry.get("spec") as GameSpec | undefined;
+    if (!spec) return;
+
+    const componentIds = new Set(
+      spec.entities.map((entity) => resolveEntityVisual(entity).componentId),
+    );
+    for (const componentId of componentIds) {
+      if (!componentId) continue;
+      const textureKey = magicPatternTextureKey(componentId);
+      if (this.textures.exists(textureKey)) continue;
+      const dataUri = magicPatternSvgDataUri(componentId);
+      if (dataUri) {
+        this.load.svg(textureKey, dataUri, { width: 512, height: 512 });
+      }
+    }
   }
 
   create() {

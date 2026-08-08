@@ -1,4 +1,5 @@
 import * as Phaser from "phaser";
+import type { ControlState, GameBus } from "./bus";
 import { GRAVITY_Y } from "./constants";
 import { BootScene } from "./scenes/BootScene";
 import { GameScene } from "./scenes/GameScene";
@@ -8,6 +9,8 @@ import type { GameSpec } from "./types";
 export function buildPhaserConfig(
   parent: HTMLElement,
   spec: GameSpec,
+  bus: GameBus,
+  controls: ControlState,
 ): Phaser.Types.Core.GameConfig {
   return {
     type: Phaser.AUTO,
@@ -27,6 +30,13 @@ export function buildPhaserConfig(
       },
     },
     scene: [BootScene, GameScene, ResultScene],
+    callbacks: {
+      preBoot: (game) => {
+        game.registry.set("spec", spec);
+        game.registry.set("bus", bus);
+        game.registry.set("controls", controls);
+      },
+    },
     audio: { disableWebAudio: false, noAudio: true },
     banner: false,
   };
