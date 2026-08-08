@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snapcade — Arrange. Snap. Play. Publish.</title>
+<style>
+  @font-face {
+    font-family: 'Fraunces';
+    src: local('Fraunces');
+  }
+
+  :root {
+    --ink: oklch(22% 0.02 40);
+    --ink-soft: oklch(46% 0.02 40);
+    --paper: oklch(99% 0.005 90);
+    --accent: oklch(64% 0.19 35);
+    --accent-ink: oklch(99% 0.01 90);
+    --line: oklch(90% 0.01 60);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  body {
+    font-family: 'Fraunces', Georgia, 'Iowan Old Style', serif;
+    display: grid;
+    place-items: center;
+    padding: clamp(1rem, 4vw, 3rem);
+  }
+
+  .stage {
+    width: 100%;
+    max-width: 68rem;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: center;
+    gap: clamp(2rem, 6vw, 5rem);
+  }
+
+  .copy {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1rem, 2.4vh, 1.6rem);
+  }
+
+  .kicker {
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+  }
+
+  .kicker::before {
+    content: "";
+    width: 1.6em;
+    height: 1px;
+    background: var(--accent);
+    display: inline-block;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(2.6rem, 6.4vw, 4.6rem);
+    line-height: 0.96;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  p.lede {
+    margin: 0;
+    max-width: 34ch;
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: clamp(0.98rem, 1.15vw, 1.1rem);
+    line-height: 1.55;
+    color: var(--ink-soft);
+    font-weight: 400;
+  }
+
+  .steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.9rem;
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink);
+    padding: 0;
+    margin: 0.2rem 0 0;
+  }
+
+  .steps span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .steps span:not(:last-child)::after {
+    content: "→";
+    color: var(--line);
+    font-weight: 400;
+    margin-left: 0.9rem;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 1.4rem;
+    margin-top: 0.4rem;
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  .btn {
+    appearance: none;
+    border: none;
+    cursor: pointer;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 0.92rem;
+    font-weight: 600;
+    padding: 0.85em 1.6em;
+    border-radius: 999px;
+    letter-spacing: 0.01em;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease;
+  }
+
+  .btn:hover {
+    background: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .link {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 2px;
+    transition: color 0.3s ease, border-color 0.3s ease;
+  }
+
+  .link:hover {
+    color: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .visual {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    display: grid;
+    place-items: center;
+  }
+
+  .frame {
+    position: relative;
+    width: 84%;
+    aspect-ratio: 1;
+  }
+
+  .frame-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 1.4rem;
+    background:
+      radial-gradient(circle at 30% 25%, oklch(97% 0.02 90) 0%, oklch(94% 0.015 70) 60%);
+    border: 1px solid var(--line);
+    box-shadow: 0 40px 80px -40px oklch(30% 0.03 40 / 0.35);
+    overflow: hidden;
+  }
+
+  .frame::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 14.28% 14.28%;
+    opacity: 0.5;
+  }
+
+  .objects {
+    position: absolute;
+    inset: 0;
+  }
+
+  .obj {
+    position: absolute;
+    background: var(--accent);
+  }
+
+  .obj.book {
+    width: 34%;
+    height: 12%;
+    left: 14%;
+    top: 20%;
+    border-radius: 3px;
+    background: oklch(58% 0.14 260);
+  }
+
+  .obj.can {
+    width: 12%;
+    height: 22%;
+    left: 58%;
+    top: 16%;
+    border-radius: 6px;
+    background: var(--accent);
+  }
+
+  .obj.block {
+    width: 16%;
+    height: 16%;
+    left: 20%;
+    top: 60%;
+    border-radius: 3px;
+    background: oklch(70% 0.15 95);
+  }
+
+  .obj.ball {
+    width: 14%;
+    height: 14%;
+    left: 62%;
+    top: 58%;
+    border-radius: 50%;
+    background: oklch(55% 0.16 25);
+  }
+
+  .obj.stick {
+    width: 30%;
+    height: 5%;
+    left: 45%;
+    top: 44%;
+    border-radius: 4px;
+    background: oklch(50% 0.1 60);
+    transform: rotate(-8deg);
+  }
+
+  .corner {
+    position: absolute;
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2px solid var(--ink);
+    opacity: 0.55;
+  }
+
+  .corner.tl { top: 0.7rem; left: 0.7rem; border-right: none; border-bottom: none; }
+  .corner.br { bottom: 0.7rem; right: 0.7rem; border-left: none; border-top: none; }
+
+  .badge {
+    position: absolute;
+    bottom: -1.1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: var(--paper);
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.6em 1.1em;
+    border-radius: 999px;
+    white-space: nowrap;
+    box-shadow: 0 12px 24px -10px oklch(30% 0.03 40 / 0.4);
+  }
+
+  @media (max-width: 780px) {
+    .stage {
+      grid-template-columns: 1fr;
+      text-align: left;
+    }
+    .visual { display: none; }
+    p.lede { max-width: 46ch; }
+  }
+
+  @media (max-height: 560px) {
+    h1 { font-size: clamp(2rem, 5vw, 3rem); }
+    .steps, .visual { display: none; }
+  }
+</style>
+</head>
+<body>
+  <main class="stage">
+    <div class="copy">
+      <p class="kicker">Snapcade</p>
+      <h1>Arrange it.<br><em>Snap</em> a photo.<br>Play the level.</h1>
+      <p class="lede">
+        Turn real objects on your desk into a playable 2D platformer —
+        one photo, no tiles, no code. Publish it to the arcade in under a minute.
+      </p>
+      <p class="steps">
+        <span>Arrange</span>
+        <span>Snap</span>
+        <span>Play</span>
+        <span>Publish</span>
+      </p>
+      <div class="actions">
+        <button class="btn">Take a photo</button>
+        <a class="link" href="#">Browse the arcade</a>
+      </div>
+    </div>
+    <div class="visual">
+      <div class="frame">
+        <div class="frame-inner">
+          <div class="objects">
+            <div class="obj book"></div>
+            <div class="obj can"></div>
+            <div class="obj stick"></div>
+            <div class="obj block"></div>
+            <div class="obj ball"></div>
+          </div>
+          <div class="corner tl"></div>
+          <div class="corner br"></div>
+        </div>
+        <div class="badge">Scene detected · 5 objects</div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
