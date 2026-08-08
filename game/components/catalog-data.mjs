@@ -240,16 +240,19 @@ const MECHANIC_BY_OBJECT_TAG = {
 function objectEntry(group, row) {
   const [name, mechanicTag, animated = false, aliases = []] = row;
   const mechanic = MECHANIC_BY_OBJECT_TAG[mechanicTag] ?? null;
+  const id = `${group.prefix}-${slug(name)}`;
   return {
-    id: `${group.prefix}-${slug(name)}`,
+    id,
     name,
     category: group.category,
     description: `${name} everyday-object sprite with the supplied ${mechanicTag} behavior concept.`,
     tags: ["everyday", mechanicTag, group.category],
     aliases: [name.toLowerCase(), ...aliases],
-    runtimeScope: mechanic ? "entity" : "future",
+    // Artwork is always renderable. `mechanic` is only the preferred mapping;
+    // physics still comes from the validated GameEntitySpec.
+    runtimeScope: "entity",
     mechanic,
-    rendererKey: mechanic ? `object.${group.prefix}-${slug(name)}` : null,
+    rendererKey: `object.${id}`,
     enabled: true,
     metadata: {
       source: "supplied-component-library",

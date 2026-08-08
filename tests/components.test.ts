@@ -6,6 +6,10 @@ import {
   queryComponentCatalog,
 } from "@/game/components/catalog";
 import { selectComponentForEntity } from "@/game/components/selectComponent";
+import {
+  EXACT_OBJECT_COMPONENT_IDS,
+  objectArtDescriptor,
+} from "@/game/art/objectArtDescriptor";
 import type {
   EntityVisualKind,
   GameEntitySpec,
@@ -48,15 +52,25 @@ describe("component catalog", () => {
     }
   });
 
-  it("keeps UI and unimplemented mechanics out of entity queries", () => {
+  it("keeps UI and enemies out of entity rendering", () => {
     expect(getComponentById("hud-game")?.runtimeScope).toBe("ui");
     expect(getComponentById("enemy-slime")?.runtimeScope).toBe("future");
-    expect(getComponentById("fur-mirror")?.runtimeScope).toBe("future");
+    expect(getComponentById("fur-mirror")?.runtimeScope).toBe("entity");
     expect(
       queryComponentCatalog({ runtimeScope: "entity" }).every(
-        (entry) => entry.mechanic,
+        (entry) => entry.rendererKey,
       ),
     ).toBe(true);
+  });
+
+  it("has an exact art descriptor for every everyday-object component", () => {
+    expect(EXACT_OBJECT_COMPONENT_IDS).toHaveLength(211);
+    for (const componentId of EXACT_OBJECT_COMPONENT_IDS) {
+      const descriptor = objectArtDescriptor(componentId);
+      expect(descriptor?.componentId).toBe(componentId);
+      expect(descriptor?.rendererKey).toBe(`object.${componentId}`);
+      expect(descriptor?.name.length).toBeGreaterThan(0);
+    }
   });
 });
 
@@ -93,8 +107,14 @@ describe("database component selection", () => {
         "spike-strip",
       ).id,
     ).toBe("hazard-spike-strip");
+  });
+
+  it("selects exact object art even when its concept mechanic is not implemented", () => {
     expect(
       selectComponentForEntity(entity("mirror", "collectible"), "gem").id,
-    ).toBe("collectible-gem");
+    ).toBe("fur-mirror");
+    expect(
+      selectComponentForEntity(entity("eraser", "collectible"), "eraser").id,
+    ).toBe("stat-eraser");
   });
 });

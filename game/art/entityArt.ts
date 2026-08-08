@@ -5,6 +5,7 @@ import type {
   GameEntitySpec,
 } from "@/game/types";
 import { resolveEntityVisual } from "./selectVisual";
+import { drawObjectComponentArt } from "./objectComponentArt";
 
 const INK = 0x1b1b23;
 const PAPER = 0xf8f4e8;
@@ -18,6 +19,8 @@ export type EntityArtCarrier = {
   art: Phaser.GameObjects.Container;
   artLabel?: Phaser.GameObjects.Text;
   visualKind: EntityVisualKind;
+  componentId?: string;
+  usesExactObjectArt: boolean;
 };
 
 type RectangleBody = Phaser.GameObjects.Rectangle & {
@@ -602,8 +605,19 @@ export function attachEntityArt<T extends RectangleBody>(
   const visual = resolveEntityVisual(entity);
   const art = scene.add.container(bodyObject.x, bodyObject.y);
   const graphics = scene.add.graphics();
-  drawEntityArt(graphics, visual.kind, bodyObject.width, bodyObject.height, palette);
+  const componentLabel = drawObjectComponentArt(
+    scene,
+    graphics,
+    visual.componentId,
+    bodyObject.width,
+    bodyObject.height,
+    palette,
+  );
+  if (!componentLabel) {
+    drawEntityArt(graphics, visual.kind, bodyObject.width, bodyObject.height, palette);
+  }
   art.add(graphics);
+  if (componentLabel) art.add(componentLabel);
   art.setDepth(entity.mechanic === "goal" ? 7 : 4);
   bodyObject.setVisible(false);
 
@@ -629,6 +643,8 @@ export function attachEntityArt<T extends RectangleBody>(
   decorated.art = art;
   decorated.artLabel = artLabel;
   decorated.visualKind = visual.kind;
+  decorated.componentId = visual.componentId;
+  decorated.usesExactObjectArt = Boolean(componentLabel);
   return decorated;
 }
 
@@ -656,7 +672,7 @@ export function animateEntityArt(
 ): void {
   if (reducedMotion()) return;
 
-  if (object.visualKind === "saw-blade") {
+  if (!object.usesExactObjectArt && object.visualKind === "saw-blade") {
     scene.tweens.add({ targets: object.art, angle: 360, duration: 2200, repeat: -1 });
     return;
   }

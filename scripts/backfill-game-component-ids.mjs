@@ -32,21 +32,27 @@ function normalize(value) {
 }
 
 const entityEntries = componentCatalogData.filter(
-  (entry) => entry.enabled && entry.runtimeScope === "entity" && entry.mechanic,
+  (entry) => entry.enabled && entry.runtimeScope === "entity" && entry.rendererKey,
 );
 
 function componentIdFor(entity) {
   const label = normalize(entity.sourceLabel);
-  const compatible = entityEntries.filter(
-    (entry) => entry.mechanic === entity.mechanic,
-  );
-  const exact = compatible.find((entry) =>
-    [entry.name, ...entry.aliases].some((candidate) => normalize(candidate) === label),
+  const labelCompatible = (entry) =>
+    entry.metadata.componentType === "object-sprite" ||
+    entry.mechanic === entity.mechanic;
+  const compatible = entityEntries.filter(labelCompatible);
+  const exact = compatible.find(
+    (entry) =>
+      entry.metadata.componentType === "object-sprite" &&
+      [entry.name, ...entry.aliases].some(
+        (candidate) => normalize(candidate) === label,
+      ),
   );
   if (exact) return exact.id;
 
   const contained = compatible
     .filter((entry) =>
+      entry.metadata.componentType === "object-sprite" &&
       [entry.name, ...entry.aliases].some((candidate) => {
         const normalized = normalize(candidate);
         return normalized.length >= 3 && (` ${label} `).includes(` ${normalized} `);

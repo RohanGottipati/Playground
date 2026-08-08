@@ -35,6 +35,19 @@ function assertCatalog() {
     if (ids.has(entry.id)) throw new Error(`Duplicate component id: ${entry.id}`);
     ids.add(entry.id);
   }
+  const objectEntries = componentCatalogData.filter(
+    (entry) => entry.metadata.componentType === "object-sprite",
+  );
+  if (
+    objectEntries.length !== 211 ||
+    objectEntries.some(
+      (entry) =>
+        entry.runtimeScope !== "entity" ||
+        entry.rendererKey !== `object.${entry.id}`,
+    )
+  ) {
+    throw new Error("Every everyday-object component must have an exact entity renderer");
+  }
 }
 
 await loadLocalEnv();

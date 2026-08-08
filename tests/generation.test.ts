@@ -107,6 +107,15 @@ describe("object-aware visual mapping", () => {
   it("prioritizes the final mechanic after repair conversions", () => {
     expect(selectEntityVisualKind(entity("scissors", "collectible", "sharp,rigid"))).toBe("gem");
   });
+
+  it("preserves an exact stored object component across supported mechanics", () => {
+    const mirror = entity("mirror", "collectible");
+    mirror.visual = { kind: "gem", componentId: "fur-mirror" };
+    expect(resolveEntityVisual(mirror)).toEqual({
+      kind: "gem",
+      componentId: "fur-mirror",
+    });
+  });
 });
 
 describe("reachability", () => {
@@ -151,6 +160,17 @@ describe("generateLevel", () => {
     expect(spec.visualVersion).toBe(1);
     expect(spec.entities.every((entity) => entity.visual?.kind)).toBe(true);
     expect(spec.entities.every((entity) => entity.visual?.componentId)).toBe(true);
+    expect(
+      spec.entities
+        .filter((entity) => entity.sourceLabel)
+        .map((entity) => entity.visual?.componentId),
+    ).toEqual([
+      "stat-notebook",
+      "kit-mug",
+      "stat-pencil",
+      "stat-scissors",
+      "stat-eraser",
+    ]);
     expect(spec.validation.reachable).toBe(true);
     expect(spec.entities.filter((entity) => entity.mechanic === "goal")).toHaveLength(1);
   });

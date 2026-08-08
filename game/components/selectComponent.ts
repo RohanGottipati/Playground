@@ -13,7 +13,10 @@ export function normalizeComponentLabel(value: string | undefined): string {
 }
 
 const entityEntries = COMPONENT_CATALOG.filter(
-  (entry) => entry.enabled && entry.runtimeScope === "entity" && entry.mechanic,
+  (entry) =>
+    entry.enabled &&
+    entry.runtimeScope === "entity" &&
+    Boolean(entry.rendererKey),
 );
 
 const labelIndex = new Map<string, ComponentCatalogEntry[]>();
@@ -31,7 +34,11 @@ function compatible(
   entries: readonly ComponentCatalogEntry[] | undefined,
   entity: GameEntitySpec,
 ): ComponentCatalogEntry | undefined {
-  return entries?.find((entry) => entry.mechanic === entity.mechanic);
+  return (
+    entries?.find(
+      (entry) => entry.metadata.componentType === "object-sprite",
+    ) ?? entries?.find((entry) => entry.mechanic === entity.mechanic)
+  );
 }
 
 /**
@@ -77,6 +84,9 @@ export function isSelectableEntityComponent(
   mechanic: GameEntitySpec["mechanic"],
 ): boolean {
   return entityEntries.some(
-    (entry) => entry.id === componentId && entry.mechanic === mechanic,
+    (entry) =>
+      entry.id === componentId &&
+      (entry.metadata.componentType === "object-sprite" ||
+        entry.mechanic === mechanic),
   );
 }
