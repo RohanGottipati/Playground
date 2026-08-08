@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import type { GameBus } from "@/game/bus";
 import { collectSafetyIssues } from "@/game/generation/runtimeSafety";
 import type { GameSpec } from "@/game/types";

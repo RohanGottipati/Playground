@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import type { GameEntitySpec } from "@/game/types";
 import type { ThemePalette } from "@/game/theme";
 

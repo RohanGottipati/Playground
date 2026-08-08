@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { MAX_FALL_SPEED, PLAYER_HEIGHT, PLAYER_WIDTH } from "@/game/constants";
 import type { GameSpec } from "@/game/types";
 import type { ThemePalette } from "@/game/theme";

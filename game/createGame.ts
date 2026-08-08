@@ -1,4 +1,4 @@
-import type Phaser from "phaser";
+import type * as Phaser from "phaser";
 import { createControlState, GameBus, type ControlState } from "./bus";
 import type { GameSpec } from "./types";
 
@@ -17,7 +17,7 @@ export async function createGame(
   parent: HTMLElement,
   spec: GameSpec,
 ): Promise<GameHandle> {
-  const [{ default: Phaser }, { buildPhaserConfig }] = await Promise.all([
+  const [Phaser, { buildPhaserConfig }] = await Promise.all([
     import("phaser"),
     import("./config"),
   ]);

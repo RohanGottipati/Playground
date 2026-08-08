@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import type { RunResult } from "@/game/bus";
 import { paletteForTheme } from "@/game/theme";
 import type { GameSpec } from "@/game/types";

@@ -63,6 +63,7 @@ export function isBackboardConfigured(): boolean {
 
 type RawResponse = {
   content: string;
+  status?: string;
   threadId?: string;
   assistantId?: string;
   provider?: string;
@@ -116,9 +117,10 @@ async function sendMessage(
     const content = typeof body.content === "string" ? body.content : "";
     return {
       content,
+      status: asString(body.status),
       threadId: asString(body.thread_id),
       assistantId: asString(body.assistant_id),
-      provider: asString(body.llm_provider) ?? choice.provider,
+      provider: asString(body.model_provider) ?? choice.provider,
       model: asString(body.model_name) ?? choice.model,
     };
   } catch (error) {
@@ -175,6 +177,16 @@ export async function analyzeImage(
     try {
       const raw = await sendMessage(input, prompt, choice);
       lastRaw = raw;
+      if (raw.status && raw.status !== "COMPLETED") {
+        lastErrors = [`backboard run ended with status ${raw.status}`];
+        logDiagnostic("backboard.request_failed", {
+          attempt,
+          provider: choice.provider,
+          model: choice.model,
+          status: raw.status,
+        });
+        break;
+      }
       const parsed = parseSceneAnalysis(raw.content);
       if (parsed.ok) {
         return {

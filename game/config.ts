@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import { GRAVITY_Y } from "./constants";
 import { BootScene } from "./scenes/BootScene";
 import { GameScene } from "./scenes/GameScene";

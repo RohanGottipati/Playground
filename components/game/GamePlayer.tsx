@@ -39,13 +39,13 @@ export function GamePlayer({
   const [result, setResult] = useState<RunResult | null>(null);
   const [leaderboard, setLeaderboard] = useState<Leaderboard | null>(null);
   const [showPhoto, setShowPhoto] = useState(false);
-  const controlsRef = useRef<ControlState | null>(null);
+  const [controls, setControls] = useState<ControlState | null>(null);
   const sessionRef = useRef<string | undefined>(undefined);
   const hudRef = useRef<HudState>(EMPTY_HUD);
 
   const onBus = useCallback(
-    (bus: GameBus, controls: ControlState) => {
-      controlsRef.current = controls;
+    (bus: GameBus, controlState: ControlState) => {
+      setControls(controlState);
 
       bus.on("hud", (next) => {
         hudRef.current = next;
@@ -88,15 +88,15 @@ export function GamePlayer({
   );
 
   const restart = useCallback(() => {
-    if (controlsRef.current) controlsRef.current.restart = true;
+    if (controls) controls.restart = true;
     setResult(null);
-  }, []);
+  }, [controls]);
 
   return (
     <div className="space-y-3">
       <GameHUD hud={hud} title={spec.title} />
       <PhaserCanvas spec={spec} onBus={onBus} />
-      <TouchControls controls={controlsRef.current} onRestart={restart} />
+      <TouchControls controls={controls} onRestart={restart} />
 
       <div className="flex flex-wrap items-center gap-3">
         <p className="hidden font-mono text-xs uppercase text-paper/60 md:block">

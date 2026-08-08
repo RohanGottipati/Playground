@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import * as Phaser from "phaser";
 import {
   BOUNCE_VELOCITY,
   GROUND_HEIGHT,
