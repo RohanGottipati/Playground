@@ -93,7 +93,7 @@ export function GamePlayer({
   }, [controls]);
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3">
       <GameHUD hud={hud} title={spec.title} />
       <PhaserCanvas spec={spec} onBus={onBus} />
       <TouchControls controls={controls} onRestart={restart} />

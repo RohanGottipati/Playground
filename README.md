@@ -24,7 +24,9 @@ No prompts, no tile editors, no level-design knowledge, no account.
    make moving → bounce pad → add up to three helper platforms). Every repair is
    recorded in `gameSpec.validation.repairActions`.
 6. A `GameSpec` that passes runtime safety checks is rendered by **Phaser 3** and
-   played in the browser.
+   played in the browser. Exact everyday-object catalog matches drive the
+   illustrated sprite while the validated mechanic continues to control
+   physics and collision behavior.
 7. `POST /api/games/publish` assigns a unique slug and makes `/game/<slug>`
    public. Plays, deaths, collectibles and completions feed the leaderboard,
    `/arcade` sorting and `/stats`.
@@ -75,7 +77,20 @@ psql "$DATABASE_URL" -f supabase/seed.sql   # optional demo game
 `register_mechanic_discovery` function, and RLS policies that make published
 data readable by anonymous clients while all writes go through the service role.
 `0002_storage.sql` creates the public `source-images` and `game-thumbnails`
-buckets.
+buckets. `0004_component_catalog.sql` creates the RLS-protected component
+registry. `0005_renderable_object_components.sql` lets exact object artwork be
+selected independently from its safe fallback mechanic. After applying them,
+sync the canonical 349-row catalog and optionally backfill older game specs:
+
+```bash
+npm run components:check
+npm run components:sync
+npm run components:backfill
+```
+
+`GET /api/components` reads enabled rows from Supabase and supports `category`,
+`scope`, `mechanic`, and `q` filters. It falls back to the same source catalog
+when Supabase is unavailable.
 
 ## Scripts
 
@@ -85,6 +100,9 @@ npm run build      # production build
 npm run lint       # eslint
 npm run typecheck  # tsc --noEmit
 npm test           # vitest (generation, parsing, repository, events)
+npm run components:check     # validate all 349 registry entries locally
+npm run components:sync      # idempotently upsert the registry to Supabase
+npm run components:backfill  # add component IDs to legacy game specs
 ```
 
 ## Controls

@@ -14,6 +14,40 @@ export type Rect = {
   height: number;
 };
 
+/**
+ * Stable, serializable art choices stored with generated levels. Physics stays
+ * mechanic-driven; these values only select the illustrated Phaser treatment.
+ */
+export const ENTITY_VISUAL_KINDS = [
+  "book-platform",
+  "pencil-bridge",
+  "bottle-tower",
+  "crate-platform",
+  "helper-platform",
+  "moving-platform",
+  "bounce-pad",
+  "mug-bouncer",
+  "trampoline",
+  "spike-strip",
+  "scissors",
+  "saw-blade",
+  "coin",
+  "gem",
+  "eraser",
+  "key",
+  "battery",
+  "portal-gate",
+  "exit-door",
+] as const;
+
+export type EntityVisualKind = (typeof ENTITY_VISUAL_KINDS)[number];
+
+export type EntityVisualSpec = {
+  kind: EntityVisualKind;
+  /** Stable component-catalog row used to select this treatment. */
+  componentId?: string;
+};
+
 export type EntityMovement = {
   axis: "x" | "y";
   distance: number;
@@ -27,11 +61,14 @@ export type GameEntitySpec = {
   mechanic: MechanicType;
   bounds: Rect;
   movement?: EntityMovement;
+  visual?: EntityVisualSpec;
   metadata?: Record<string, string | number | boolean>;
 };
 
 export type GameSpec = {
   schemaVersion: 1;
+  /** Absent on legacy games, which resolve compatible visuals at runtime. */
+  visualVersion?: 1;
   title: string;
   slug?: string;
   theme: string;

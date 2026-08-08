@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import type { GameEntitySpec } from "@/game/types";
 import type { ThemePalette } from "@/game/theme";
+import { animateEntityArt, attachEntityArt } from "@/game/art/entityArt";
 import type { StaticRect } from "./Platform";
 
 export function createHazard(
@@ -15,16 +16,8 @@ export function createHazard(
     entity.bounds.height,
     palette.hazard,
   );
-  rect.setStrokeStyle(3, 0x000000, 0.4);
   scene.physics.add.existing(rect, true);
-
-  scene.tweens.add({
-    targets: rect,
-    alpha: 0.65,
-    duration: 500,
-    yoyo: true,
-    repeat: -1,
-  });
-
-  return rect as StaticRect;
+  const hazard = attachEntityArt(scene, rect as StaticRect, entity, palette);
+  animateEntityArt(scene, hazard, entity.mechanic);
+  return hazard;
 }

@@ -42,7 +42,13 @@ describe("MemoryRepository", () => {
     const games = await db.listGames({ sort: "newest", limit: 10, offset: 0 });
     expect(games).toHaveLength(1);
     expect(games[0].slug).toBe("desk-dash");
-    expect(await db.getGameBySlug("desk-dash")).toBeDefined();
+    const stored = await db.getGameBySlug("desk-dash");
+    expect(stored).toBeDefined();
+    expect(stored?.gameSpec.visualVersion).toBe(1);
+    expect(stored?.gameSpec.entities.every((entity) => entity.visual?.kind)).toBe(true);
+    expect(
+      stored?.gameSpec.entities.every((entity) => entity.visual?.componentId),
+    ).toBe(true);
   });
 
   it("aggregates sessions into leaderboard and stats", async () => {

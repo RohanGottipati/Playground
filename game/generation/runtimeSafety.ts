@@ -3,6 +3,8 @@ import {
   MOVING_PLATFORM_MAX_SPEED,
 } from "@/game/constants";
 import type { GameSpec } from "@/game/types";
+import { isEntityVisualKind } from "@/game/art/selectVisual";
+import { isSelectableEntityComponent } from "@/game/components/selectComponent";
 import { AppError } from "@/lib/errors/AppError";
 import { isStandable } from "./validateReachability";
 
@@ -59,6 +61,15 @@ export function collectSafetyIssues(spec: GameSpec): SafetyIssue[] {
       ) {
         issues.push(`${entity.id} has movement values outside the allowed range`);
       }
+    }
+    if (entity.visual && !isEntityVisualKind(entity.visual.kind)) {
+      issues.push(`${entity.id} has an unsupported visual kind`);
+    }
+    if (
+      entity.visual?.componentId &&
+      !isSelectableEntityComponent(entity.visual.componentId, entity.mechanic)
+    ) {
+      issues.push(`${entity.id} has an incompatible component id`);
     }
   }
 

@@ -1,6 +1,7 @@
 import * as Phaser from "phaser";
 import type { GameEntitySpec } from "@/game/types";
 import type { ThemePalette } from "@/game/theme";
+import { animateEntityArt, attachEntityArt } from "@/game/art/entityArt";
 import type { StaticRect } from "./Platform";
 
 export function createCollectible(
@@ -15,18 +16,8 @@ export function createCollectible(
     entity.bounds.height,
     palette.collectible,
   );
-  rect.setStrokeStyle(2, 0x000000, 0.35);
-  rect.setAngle(45);
   scene.physics.add.existing(rect, true);
-
-  scene.tweens.add({
-    targets: rect,
-    y: rect.y - 8,
-    duration: 900,
-    yoyo: true,
-    repeat: -1,
-    ease: "Sine.easeInOut",
-  });
-
-  return rect as StaticRect;
+  const collectible = attachEntityArt(scene, rect as StaticRect, entity, palette);
+  animateEntityArt(scene, collectible, entity.mechanic);
+  return collectible;
 }

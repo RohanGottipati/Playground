@@ -7,8 +7,13 @@ import {
 } from "@/game/constants";
 import type { ControlState, GameBus } from "@/game/bus";
 import { paletteForTheme, type ThemePalette } from "@/game/theme";
-import type { GameEntitySpec, GameSpec } from "@/game/types";
-import { createPlayer, respawnPlayer, type PlayerObject } from "@/game/entities/Player";
+import type { GameSpec } from "@/game/types";
+import {
+  createPlayer,
+  respawnPlayer,
+  updatePlayerArt,
+  type PlayerObject,
+} from "@/game/entities/Player";
 import {
   createBouncePad,
   createMovingPlatform,
@@ -19,6 +24,8 @@ import { createHazard } from "@/game/entities/Hazard";
 import { createCollectible } from "@/game/entities/Collectible";
 import { createPortal } from "@/game/entities/Portal";
 import { createGoal } from "@/game/entities/Goal";
+import { destroyEntityArt } from "@/game/art/entityArt";
+import { createGroundArt, createWorldBackdrop } from "@/game/art/worldArt";
 
 const PORTAL_COOLDOWN_MS = 900;
 const HUD_INTERVAL_MS = 100;
@@ -71,7 +78,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, width, height);
     this.cameras.main.setBackgroundColor(this.palette.background);
 
-    this.drawBackdrop();
+    createWorldBackdrop(this, this.spec, this.palette);
 
     const solids: Phaser.GameObjects.GameObject[] = [this.createGround()];
     const bouncePads: Phaser.GameObjects.GameObject[] = [];
@@ -81,28 +88,29 @@ export class GameScene extends Phaser.Scene {
     for (const entity of this.spec.entities) {
       switch (entity.mechanic) {
         case "static_platform":
-          solids.push(this.labelled(createStaticPlatform(this, entity, this.palette), entity));
+          solids.push(createStaticPlatform(this, entity, this.palette));
           break;
         case "moving_platform":
-          solids.push(this.labelled(createMovingPlatform(this, entity, this.palette), entity));
+          solids.push(createMovingPlatform(this, entity, this.palette));
           break;
         case "bounce_pad":
-          bouncePads.push(this.labelled(createBouncePad(this, entity, this.palette), entity));
+          bouncePads.push(createBouncePad(this, entity, this.palette));
           break;
         case "hazard":
-          hazards.push(this.labelled(createHazard(this, entity, this.palette), entity));
+          hazards.push(createHazard(this, entity, this.palette));
           break;
         case "collectible": {
-          const collectible = this.labelled(
-            createCollectible(this, entity, this.palette),
+          const collectible = createCollectible(
+            this,
             entity,
+            this.palette,
           ) as CollectibleRect;
           this.collectibles.push(collectible);
           break;
         }
         case "portal":
           this.portals.push(
-            this.labelled(createPortal(this, entity, this.palette), entity) as StaticRect,
+            createPortal(this, entity, this.palette) as StaticRect,
           );
           break;
         case "goal":
@@ -138,7 +146,7 @@ export class GameScene extends Phaser.Scene {
     this.bus.emit("gameEvent", { type: "game_started" });
   }
 
-  update(_time: number, delta: number) {
+  update(time: number, delta: number) {
     if (!this.player) return;
 
     if (!this.completed) {
@@ -161,6 +169,7 @@ export class GameScene extends Phaser.Scene {
     if (body.velocity.y > MAX_FALL_SPEED) body.setVelocityY(MAX_FALL_SPEED);
 
     const onGround = body.blocked.down || body.touching.down;
+    updatePlayerArt(this.player, onGround, time);
     if (jump && !this.jumpWasDown && onGround && !this.completed) {
       body.setVelocityY(this.spec.player.jumpVelocity);
     }
@@ -196,34 +205,9 @@ export class GameScene extends Phaser.Scene {
     keyboard.addCapture(["A", "D", "W", "S", "LEFT", "RIGHT", "UP", "DOWN", "SPACE", "R"]);
   }
 
-  private drawBackdrop() {
-    const { width, height } = this.spec.world;
-    const backdrop = this.add.rectangle(
-      width / 2,
-      height / 2,
-      width,
-      height,
-      this.palette.backgroundAccent,
-    );
-    backdrop.setAlpha(0.35);
-    backdrop.setDepth(-20);
-    backdrop.setScrollFactor(0.2);
-
-    for (let index = 0; index < 12; index += 1) {
-      const stripe = this.add.rectangle(
-        (index / 12) * width + 40,
-        height / 2,
-        6,
-        height,
-        this.palette.platform,
-      );
-      stripe.setAlpha(0.06);
-      stripe.setDepth(-19);
-      stripe.setScrollFactor(0.35);
-    }
-  }
-
-  private createGround(): StaticRect {
+  private createGround(): Phaser.GameObjects.Rectangle & {
+    body: Phaser.Physics.Arcade.StaticBody;
+  } {
     const { width } = this.spec.world;
     const ground = this.add.rectangle(
       width / 2,
@@ -232,36 +216,25 @@ export class GameScene extends Phaser.Scene {
       GROUND_HEIGHT,
       this.palette.ground,
     );
-    ground.setStrokeStyle(4, 0x000000, 0.35);
     this.physics.add.existing(ground, true);
-    return ground as StaticRect;
-  }
-
-  /** Small source-object label so the physical origin stays visible. */
-  private labelled<T extends Phaser.GameObjects.Rectangle>(
-    object: T,
-    entity: GameEntitySpec,
-  ): T {
-    if (!entity.sourceLabel) return object;
-    const text = this.add.text(
-      object.x,
-      object.y - object.height / 2 - 14,
-      entity.sourceLabel.slice(0, 18),
-      {
-        fontFamily: "monospace",
-        fontSize: "13px",
-        color: this.palette.label,
-      },
+    ground.setVisible(false);
+    createGroundArt(
+      this,
+      width,
+      GROUND_TOP,
+      GROUND_HEIGHT,
+      this.spec.theme,
+      this.palette,
     );
-    text.setOrigin(0.5, 0.5);
-    text.setAlpha(0.75);
-    text.setDepth(5);
-    return object;
+    return ground as Phaser.GameObjects.Rectangle & {
+      body: Phaser.Physics.Arcade.StaticBody;
+    };
   }
 
   private collect(collectible: CollectibleRect) {
     if (collectible.collected) return;
     collectible.collected = true;
+    destroyEntityArt(collectible);
     collectible.destroy();
     this.collected += 1;
     this.emitHud();
