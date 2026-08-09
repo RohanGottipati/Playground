@@ -1582,7 +1582,7 @@ Every chart must query actual Supabase data.
 
 Do not:
 
-- hardcode statistics
+- use fixed statistics in production views
 - seed fake data for the final live demo without clearly labeling it
 - show screenshots instead of interactive visualizations
 
@@ -2027,7 +2027,7 @@ Before judging:
 
 **Exit condition:** Public site loads and can read/write a test database row.
 
-## Phase 2: Hardcoded game engine
+## Phase 2: Baseline game engine
 
 - install Phaser
 - create platformer scene
@@ -2038,9 +2038,9 @@ Before judging:
 - implement goal
 - implement timer
 - implement death and reset
-- load one hardcoded `GameSpec`
+- load one reference `GameSpec`
 
-**Exit condition:** A complete hardcoded game is playable on desktop and mobile.
+**Exit condition:** A complete reference game is playable on desktop and mobile.
 
 ## Phase 3: GameSpec-driven engine
 
@@ -2184,7 +2184,7 @@ If there are only two developers, split into:
 - **AI/backend/data**
 - **frontend/game/design**
 
-Integrate early using a shared hardcoded `GameSpec`.
+Integrate early using a shared reference `GameSpec`.
 
 ---
 
