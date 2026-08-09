@@ -227,6 +227,12 @@ export type TelemetrySnapshot = {
   recentSpatialEvents: SpatialEventRecord[];
 };
 
+/** One fastest-completion row for the per-game Best Runtimes Leaderboard. */
+export type RuntimeLeaderboardEntry = {
+  city: string;
+  durationSeconds: number;
+};
+
 export type SessionUpdate = {
   deathCount?: number;
   collectiblesCollected?: number;
@@ -278,6 +284,11 @@ export interface Repository {
    * fatalities, active sessions) to a single game.
    */
   getTelemetrySnapshot(gameId?: string): Promise<TelemetrySnapshot>;
+  /**
+   * Fastest `clear` completions recorded for a single game, sorted by
+   * lowest durationSeconds. Powers the Best Runtimes Leaderboard.
+   */
+  getFastestRuntimes(gameId: string, limit: number): Promise<RuntimeLeaderboardEntry[]>;
   toggleLike(gameId: string, anonymousSessionId: string): Promise<number>;
   registerMechanicDiscoveries(
     gameId: string,

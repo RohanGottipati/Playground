@@ -23,6 +23,7 @@ import type {
   PublishInput,
   RecordEventInput,
   Repository,
+  RuntimeLeaderboardEntry,
   SaveDraftInput,
   SessionUpdate,
   SpatialEventRecord,
@@ -649,6 +650,39 @@ export class SupabaseRepository implements Repository {
       activeSessionsByGame,
       recentSpatialEvents,
     };
+  }
+
+  async getFastestRuntimes(
+    gameId: string,
+    limit: number,
+  ): Promise<RuntimeLeaderboardEntry[]> {
+    // Sorted in application code rather than via `.order()` on a jsonb path,
+    // since PostgREST can't cast event_payload->>durationSeconds to numeric
+    // for ordering. 1000 recent clears is comfortably more than any game
+    // will see between polls.
+    const { data, error } = await this.client
+      .from("game_events")
+      .select("event_payload")
+      .eq("game_id", gameId)
+      .eq("event_type", "clear")
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    if (error) fail("getFastestRuntimes", error);
+
+    return ((data ?? []) as { event_payload: Record<string, unknown> }[])
+      .map((row): RuntimeLeaderboardEntry | null => {
+        const payload = row.event_payload ?? {};
+        const durationSeconds =
+          typeof payload.durationSeconds === "number" ? payload.durationSeconds : null;
+        if (durationSeconds == null) return null;
+        return {
+          city: typeof payload.city === "string" ? payload.city : "Toronto",
+          durationSeconds,
+        };
+      })
+      .filter((entry): entry is RuntimeLeaderboardEntry => entry !== null)
+      .sort((a, b) => a.durationSeconds - b.durationSeconds)
+      .slice(0, limit);
   }
 
   async toggleLike(gameId: string, anonymousSessionId: string): Promise<number> {

@@ -71,6 +71,7 @@ export async function POST(request: Request) {
 }
 
 const MAX_FATALITIES_DISPLAYED = 20;
+const RUNTIME_LEADERBOARD_SIZE = 10;
 
 function formatDuration(seconds: number | null): string {
   return seconds != null ? `${seconds.toFixed(1)}s` : "an unknown time";
@@ -103,9 +104,10 @@ export async function GET(request: Request) {
     const gameId = url.searchParams.get("gameId") || undefined;
 
     const db = repository();
-    const [stats, telemetry] = await Promise.all([
+    const [stats, telemetry, fastestRuntimes] = await Promise.all([
       db.getStats(),
       db.getTelemetrySnapshot(gameId),
+      gameId ? db.getFastestRuntimes(gameId, RUNTIME_LEADERBOARD_SIZE) : Promise.resolve([]),
     ]);
 
     // Only two narrated action types reach the ticker: round completions
@@ -131,6 +133,18 @@ export async function GET(request: Request) {
       totalFatalitiesPerGame[gameId] = Math.min(MAX_FATALITIES_DISPLAYED, count);
     }
 
+    // Per-game Best Runtimes Leaderboard: top N fastest 'clear' completions
+    // for the currently requested gameId, sorted by lowest durationSeconds.
+    // durationSeconds ships alongside the formatted time so the client can
+    // merge these real entries against its own demo benchmark entries and
+    // re-sort/re-rank the combined list.
+    const leaderboard = fastestRuntimes.map((entry, index) => ({
+      rank: index + 1,
+      city: entry.city,
+      time: formatDuration(entry.durationSeconds),
+      durationSeconds: entry.durationSeconds,
+    }));
+
     return ok({
       totalObjectsScannedGlobal: stats.objectsScanned,
       totalObjectsScannedUser,
@@ -142,6 +156,7 @@ export async function GET(request: Request) {
         points,
       })),
       topObjects: stats.topObjects,
+      leaderboard,
     });
   } catch (error) {
     return failure("event.telemetry_failed", error);

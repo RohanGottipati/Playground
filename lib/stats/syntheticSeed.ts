@@ -133,3 +133,34 @@ export function syntheticDeathPoints(
   }
   return points;
 }
+
+const MIN_SYNTHETIC_RUNTIME_ENTRIES = 1;
+const MAX_SYNTHETIC_RUNTIME_ENTRIES = 10;
+const SYNTHETIC_RUNTIME_CITY = "Toronto";
+
+export type SyntheticRuntimeEntry = { city: string; durationSeconds: number };
+
+/**
+ * A per-game Best Runtimes benchmark: 1-10 fallback finish times in
+ * strictly ascending order (e.g. 11.4s, 14.2s, 18.7s), stable across polls
+ * but varied game to game, all attributed to Toronto. Merged with real
+ * completions and re-sorted client-side, so a real time slots in wherever
+ * it actually falls rather than always trailing the fallback rows.
+ */
+export function syntheticRuntimeLeaderboard(gameId: string): SyntheticRuntimeEntry[] {
+  const random = seededRandom(hashString(gameId) ^ 0x2545f491);
+  const count =
+    MIN_SYNTHETIC_RUNTIME_ENTRIES +
+    Math.floor(random() * (MAX_SYNTHETIC_RUNTIME_ENTRIES - MIN_SYNTHETIC_RUNTIME_ENTRIES + 1));
+
+  const entries: SyntheticRuntimeEntry[] = [];
+  let durationSeconds = 8 + random() * 6;
+  for (let i = 0; i < count; i += 1) {
+    entries.push({
+      city: SYNTHETIC_RUNTIME_CITY,
+      durationSeconds: Math.round(durationSeconds * 10) / 10,
+    });
+    durationSeconds += 1.5 + random() * 3.5;
+  }
+  return entries;
+}

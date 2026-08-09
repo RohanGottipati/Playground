@@ -9,17 +9,22 @@ import {
   SYNTHETIC_TOP_OBJECTS,
   syntheticDeathPoints,
   syntheticFatalityCount,
+  syntheticRuntimeLeaderboard,
 } from "@/lib/stats/syntheticSeed";
 import { DeathHeatmap } from "./DeathHeatmap";
 import { GameSelector } from "./GameSelector";
 import { LiveTicker } from "./LiveTicker";
 import { ActiveSessionsCard, FatalitiesCard, ObjectsScannedCard } from "./MetricCards";
 import { ObjectTopology } from "./ObjectTopology";
+import { RuntimeLeaderboard, type RuntimeLeaderboardRow } from "./RuntimeLeaderboard";
 import type { DashboardEntity, DashboardWorld } from "./types";
 
 // Comfortably readable for a live demo audience.
 const POLL_MS = 2500;
 const MAX_FATALITIES_DISPLAYED = 20;
+const MAX_LEADERBOARD_ENTRIES = 10;
+
+type RuntimeLeaderboardApiEntry = { city: string; durationSeconds: number };
 
 type TelemetryResponse = {
   totalObjectsScannedGlobal: number;
@@ -29,7 +34,12 @@ type TelemetryResponse = {
   recentEvents: string[];
   aggregateDeathsXY: { gameId: string; points: { x: number; y: number }[] }[];
   topObjects: { label: string; count: number }[];
+  leaderboard: RuntimeLeaderboardApiEntry[];
 };
+
+function formatRuntimeSeconds(seconds: number): string {
+  return `${seconds.toFixed(1)}s`;
+}
 
 type SelectedDetail = {
   title: string;
@@ -180,6 +190,22 @@ export function TechnationDashboard({
   // Real only: no fabricated ticker entries, ever.
   const tickerLines = telemetry?.recentEvents ?? [];
 
+  // Top 10 fastest completions for the selected game: real clears merged
+  // with a stable per-game demo benchmark (1-10 ascending fallback times,
+  // seeded off the game id so they don't jitter between polls), re-sorted
+  // and re-ranked together so a real time slots in — or overtakes the
+  // benchmark — wherever it actually falls, instead of always trailing it.
+  const realRuntimeEntries: RuntimeLeaderboardApiEntry[] = telemetry?.leaderboard ?? [];
+  const syntheticRuntimeEntries = selectedGameId ? syntheticRuntimeLeaderboard(selectedGameId) : [];
+  const leaderboardEntries: RuntimeLeaderboardRow[] = [...realRuntimeEntries, ...syntheticRuntimeEntries]
+    .sort((a, b) => a.durationSeconds - b.durationSeconds)
+    .slice(0, MAX_LEADERBOARD_ENTRIES)
+    .map((entry, index) => ({
+      rank: index + 1,
+      city: entry.city,
+      time: formatRuntimeSeconds(entry.durationSeconds),
+    }));
+
   const globalObjectsScanned =
     telemetry?.totalObjectsScannedGlobal && telemetry.totalObjectsScannedGlobal > 0
       ? telemetry.totalObjectsScannedGlobal
@@ -213,7 +239,10 @@ export function TechnationDashboard({
 
       <GameSelector games={gameOptions} selectedId={selectedGameId} onSelect={setSelectedGameId} />
 
-      <LiveTicker events={tickerLines} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <LiveTicker events={tickerLines} />
+        <RuntimeLeaderboard entries={leaderboardEntries} gameTitle={selectedDetail?.title ?? "—"} />
+      </div>
 
       {selectedDetail ? (
         <DeathHeatmap

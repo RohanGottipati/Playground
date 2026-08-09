@@ -17,6 +17,7 @@ import type {
   PublishInput,
   RecordEventInput,
   Repository,
+  RuntimeLeaderboardEntry,
   SaveDraftInput,
   SessionUpdate,
   SpatialEventRecord,
@@ -408,6 +409,27 @@ export class MemoryRepository implements Repository {
       });
 
     return { deathTotalsByGame, activeSessionsByGame, recentSpatialEvents };
+  }
+
+  async getFastestRuntimes(
+    gameId: string,
+    limit: number,
+  ): Promise<RuntimeLeaderboardEntry[]> {
+    return state()
+      .events.filter((event) => event.gameId === gameId && event.eventType === "clear")
+      .map((event): RuntimeLeaderboardEntry | null => {
+        const payload = event.eventPayload;
+        const durationSeconds =
+          typeof payload.durationSeconds === "number" ? payload.durationSeconds : null;
+        if (durationSeconds == null) return null;
+        return {
+          city: typeof payload.city === "string" ? payload.city : "Toronto",
+          durationSeconds,
+        };
+      })
+      .filter((entry): entry is RuntimeLeaderboardEntry => entry !== null)
+      .sort((a, b) => a.durationSeconds - b.durationSeconds)
+      .slice(0, limit);
   }
 
   async toggleLike(gameId: string, anonymousSessionId: string): Promise<number> {
