@@ -249,7 +249,8 @@ function LiveGlobe() {
     >
       <video
         className="h-full w-full object-cover"
-        src="/video/earth.mov"
+        src="/video/earth.mp4"
+        poster="/video/earth-poster.jpg"
         autoPlay
         loop
         muted
@@ -484,7 +485,8 @@ function PageFour() {
       <div className="relative min-h-[280px] flex-1 overflow-hidden rounded-2xl bg-appleBg">
         <video
           className="h-full w-full object-cover"
-          src="/video/dance.mov"
+          src="/video/dance.mp4"
+          poster="/video/dance-poster.jpg"
           autoPlay
           loop
           muted
