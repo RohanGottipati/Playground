@@ -15,24 +15,40 @@ export function ShareButton({
   label = "Share",
   copiedLabel = "Copied!",
 }: Props) {
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
 
   async function share(event: React.MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
     const url = `${window.location.origin}/game/${slug}`;
     try {
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: "Playground", url });
+          return;
+        } catch (cause) {
+          if (cause instanceof DOMException && cause.name === "AbortError") return;
+        }
+      }
       await navigator.clipboard.writeText(url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      setState("copied");
+      window.setTimeout(() => setState("idle"), 2000);
     } catch (cause) {
-      console.warn("copy failed", cause);
+      console.warn("share failed", cause);
+      setState("failed");
+      window.setTimeout(() => setState("idle"), 2000);
     }
   }
 
   return (
-    <button type="button" className={className} onClick={share}>
-      {copied ? copiedLabel : label}
+    <button
+      type="button"
+      className={className}
+      onClick={share}
+      aria-label={`Share game ${slug}`}
+      aria-live="polite"
+    >
+      {state === "copied" ? copiedLabel : state === "failed" ? "Try again" : label}
     </button>
   );
 }

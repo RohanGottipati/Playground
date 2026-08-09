@@ -1,7 +1,5 @@
 "use client";
 
-import { Gamepad2 } from "lucide-react";
-
 export type SelectableGame = { id: string; title: string };
 
 export function GameSelector({
@@ -14,16 +12,17 @@ export function GameSelector({
   onSelect: (id: string) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 rounded-xl border-[3px] border-ink bg-cabinet/90 px-3 py-2 font-mono text-xs uppercase text-paper/70">
-      <Gamepad2 className="h-4 w-4 text-token" aria-hidden />
-      <span className="whitespace-nowrap text-paper/50">Game</span>
+    <label className="flex max-w-md items-center gap-3 rounded-2xl bg-appleBg px-4 py-3">
+      <span className="whitespace-nowrap font-inter text-xs font-medium uppercase tracking-wide text-appleGray">
+        Game
+      </span>
       <select
         value={selectedId ?? ""}
         onChange={(event) => onSelect(event.target.value)}
-        className="min-w-0 max-w-[16rem] truncate bg-transparent text-paper outline-none"
+        className="min-w-0 flex-1 truncate bg-transparent font-inter text-sm font-medium text-appleInk outline-none"
       >
         {games.map((game) => (
-          <option key={game.id} value={game.id} className="bg-cabinet text-paper">
+          <option key={game.id} value={game.id}>
             {game.title}
           </option>
         ))}

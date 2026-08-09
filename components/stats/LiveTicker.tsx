@@ -1,31 +1,40 @@
 "use client";
 
-import { Radio } from "lucide-react";
+import type { SpatialEventRecord } from "@/lib/db/types";
 
-export function LiveTicker({ events }: { events: string[] }) {
+function eventLine(event: SpatialEventRecord): string {
+  const city = event.city ?? "Unknown location";
+  if (event.eventType === "game_completed") {
+    const duration = event.durationMs == null
+      ? "an unknown time"
+      : `${(event.durationMs / 1000).toFixed(1)}s`;
+    return `${city} completed ${event.gameTitle} in ${duration}`;
+  }
+
+  const coordinates = event.x == null || event.y == null
+    ? "at an unknown position"
+    : `at (${event.x}, ${event.y})`;
+  return `${city} recorded a fatality in ${event.gameTitle} ${coordinates}`;
+}
+
+export function LiveTicker({ events }: { events: SpatialEventRecord[] }) {
   return (
-    <div className="panel">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="marquee-title flex items-center gap-2 text-base text-token">
-          <Radio className="h-4 w-4 animate-pulse text-marquee" aria-hidden />
-          Live stream
-        </h3>
-      </div>
+    <div className="rounded-3xl bg-appleBg p-5">
+      <h3 className="mb-3 font-inter text-base font-medium text-appleInk">
+        Live activity
+      </h3>
       {events.length === 0 ? (
-        <p className="font-mono text-xs text-paper/50">Waiting for the first event…</p>
+        <p className="font-inter text-xs text-appleGray">
+          Waiting for the first completion or fatality.
+        </p>
       ) : (
-        <ul
-          className="h-56 space-y-1.5 overflow-y-auto font-mono text-[11px] text-paper/80"
-          aria-live="polite"
-        >
-          {events.map((line, index) => (
+        <ul className="max-h-56 divide-y divide-white overflow-y-auto" aria-live="polite">
+          {events.map((event) => (
             <li
-              key={`${index}-${line}`}
-              className={`truncate border-b border-ink/60 pb-1.5 ${
-                index === 0 ? "text-screen" : ""
-              }`}
+              key={`${event.createdAt}-${event.eventType}`}
+              className="py-2 font-inter text-xs text-appleGray first:pt-0 last:pb-0"
             >
-              {line}
+              {eventLine(event)}
             </li>
           ))}
         </ul>

@@ -89,7 +89,9 @@ describe("phone capture sessions", () => {
       ),
     ).toEqual({ status: "ready", upload });
     expect(await phoneCaptureAvailability(session.captureToken)).toBe("used");
-    await expect(claimCaptureUpload(session.captureToken)).rejects.toMatchObject({
+    await expect(
+      claimCaptureUpload(session.captureToken, new Date(NOW.getTime() + 4000)),
+    ).rejects.toMatchObject({
       code: "CAPTURE_USED",
     });
   });

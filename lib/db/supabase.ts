@@ -10,7 +10,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeObjectLabel } from "@/lib/utils/sanitize";
 import { logDiagnostic } from "@/lib/utils/logger";
 import { sortSummaries } from "./memory";
-import { ACTIVE_SESSION_EVENT_TYPES, TICKER_EVENT_TYPES } from "./types";
+import { TELEMETRY_EVENT_TYPES } from "./types";
 import type {
   ArcadeSort,
   GameObjectRecord,
@@ -28,7 +28,7 @@ import type {
   SpatialEventRecord,
   StatsSnapshot,
   TelemetrySnapshot,
-  TickerEventType,
+  TelemetryEventType,
 } from "./types";
 
 type GameRow = {
@@ -553,101 +553,86 @@ export class SupabaseRepository implements Repository {
     };
   }
 
-  async getTelemetrySnapshot(gameId?: string): Promise<TelemetrySnapshot> {
+  async getTelemetrySnapshot(gameId: string): Promise<TelemetrySnapshot> {
     const client = this.client;
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60_000).toISOString();
 
-    let deathQuery = client
-      .from("game_events")
-      .select("game_id")
-      .eq("event_type", "death")
-      .limit(2000);
-    let recentQuery = client
+    const countsQuery = client.rpc("get_game_telemetry_counts", {
+      p_game_id: gameId,
+      p_active_since: fiveMinutesAgo,
+    });
+    const recentQuery = client
       .from("game_events")
       .select("game_id, event_type, event_payload, created_at, games(title)")
-      .in("event_type", TICKER_EVENT_TYPES)
+      .eq("game_id", gameId)
+      .in("event_type", TELEMETRY_EVENT_TYPES)
       .order("created_at", { ascending: false })
-      .limit(300);
-    // Active sessions: distinct session_ids seen on a start/progress/complete
-    // event in the last 5 minutes. Deliberately excludes every other event
-    // type (deaths, likes, opens, ...) — those must never move this count.
-    let activeQuery = client
+      .limit(15);
+    const deathPointsQuery = client
       .from("game_events")
-      .select("game_id, session_id")
-      .in("event_type", ACTIVE_SESSION_EVENT_TYPES)
-      .not("session_id", "is", null)
-      .gte("created_at", fiveMinutesAgo)
-      .limit(5000);
+      .select("event_payload")
+      .eq("game_id", gameId)
+      .eq("event_type", "player_died")
+      .order("created_at", { ascending: false })
+      .limit(20);
 
-    if (gameId) {
-      deathQuery = deathQuery.eq("game_id", gameId);
-      recentQuery = recentQuery.eq("game_id", gameId);
-      activeQuery = activeQuery.eq("game_id", gameId);
-    }
-
-    const [deathRows, recentRows, activeRows] = await Promise.all([
-      deathQuery,
+    const [counts, recentRows, deathPointRows] = await Promise.all([
+      countsQuery,
       recentQuery,
-      activeQuery,
+      deathPointsQuery,
     ]);
 
-    if (deathRows.error) fail("getTelemetrySnapshot.deaths", deathRows.error);
+    if (counts.error) fail("getTelemetrySnapshot.counts", counts.error);
     if (recentRows.error) fail("getTelemetrySnapshot.recent", recentRows.error);
-    if (activeRows.error) fail("getTelemetrySnapshot.active", activeRows.error);
-
-    const deathTotalsByGame: Record<string, number> = {};
-    for (const row of (deathRows.data ?? []) as { game_id: string }[]) {
-      deathTotalsByGame[row.game_id] = (deathTotalsByGame[row.game_id] ?? 0) + 1;
+    if (deathPointRows.error) {
+      fail("getTelemetrySnapshot.deathPoints", deathPointRows.error);
     }
 
-    const activeSessionSets = new Map<string, Set<string>>();
-    for (const row of (activeRows.data ?? []) as {
-      game_id: string;
-      session_id: string | null;
-    }[]) {
-      if (!row.session_id) continue;
-      const set = activeSessionSets.get(row.game_id) ?? new Set<string>();
-      set.add(row.session_id);
-      activeSessionSets.set(row.game_id, set);
-    }
-    const activeSessionsByGame: Record<string, number> = {};
-    for (const [gid, sessions] of activeSessionSets) {
-      activeSessionsByGame[gid] = sessions.size;
-    }
+    type CountRow = { fatality_count: number | string; active_sessions: number | string };
+    const countRow = ((counts.data ?? []) as CountRow[])[0];
 
     type RecentRow = {
       game_id: string;
-      event_type: TickerEventType;
+      event_type: TelemetryEventType;
       event_payload: Record<string, unknown>;
       created_at: string;
       games: { title: string } | { title: string }[] | null;
     };
 
-    const recentSpatialEvents: SpatialEventRecord[] = (
+    const recentEvents: SpatialEventRecord[] = (
       (recentRows.data ?? []) as RecentRow[]
     ).map((row) => {
       const gameTitleSource = Array.isArray(row.games) ? row.games[0] : row.games;
       const payload = row.event_payload ?? {};
       const x = typeof payload.x === "number" ? payload.x : null;
       const y = typeof payload.y === "number" ? payload.y : null;
-      const durationSeconds =
-        typeof payload.durationSeconds === "number" ? payload.durationSeconds : null;
+      const durationMs =
+        typeof payload.elapsedMs === "number" ? payload.elapsedMs : null;
       return {
         gameId: row.game_id,
         gameTitle: gameTitleSource?.title ?? "Untitled",
         eventType: row.event_type,
-        city: typeof payload.city === "string" ? payload.city : "Toronto",
+        city: typeof payload.city === "string" ? payload.city : null,
         x,
         y,
-        durationSeconds,
+        durationMs,
         createdAt: row.created_at,
       };
     });
 
+    const deathPoints = (
+      (deathPointRows.data ?? []) as { event_payload: Record<string, unknown> }[]
+    ).flatMap((row) => {
+      const { x, y } = row.event_payload ?? {};
+      return typeof x === "number" && typeof y === "number" ? [{ x, y }] : [];
+    });
+
     return {
-      deathTotalsByGame,
-      activeSessionsByGame,
-      recentSpatialEvents,
+      gameId,
+      fatalityCount: Number(countRow?.fatality_count ?? 0),
+      activeSessions: Number(countRow?.active_sessions ?? 0),
+      recentEvents,
+      deathPoints,
     };
   }
 

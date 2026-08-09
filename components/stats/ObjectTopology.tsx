@@ -1,6 +1,5 @@
 "use client";
 
-import { PieChart } from "lucide-react";
 import { useMemo } from "react";
 import { DonutChart, type DonutDatum } from "./DonutChart";
 import type { DashboardEntity } from "./types";
@@ -34,22 +33,21 @@ export function ObjectTopology({
   );
 
   return (
-    <div className="panel">
+    <div className="rounded-3xl bg-appleBg p-5">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="marquee-title flex items-center gap-2 text-base text-token">
-          <PieChart className="h-4 w-4 text-cable" aria-hidden />
+        <h3 className="font-inter text-base font-medium text-appleInk">
           Global desk topology
         </h3>
       </div>
       <div className="grid gap-6 sm:grid-cols-2">
         <div>
-          <p className="mb-2 truncate font-mono text-[11px] uppercase text-paper/50">
+          <p className="mb-2 truncate font-inter text-[11px] font-medium uppercase text-appleGray">
             {gameTitle} — objects in this game
           </p>
           <DonutChart data={gameData} emptyMessage="No object breakdown for this game yet." />
         </div>
         <div>
-          <p className="mb-2 font-mono text-[11px] uppercase text-paper/50">
+          <p className="mb-2 font-inter text-[11px] font-medium uppercase text-appleGray">
             Across every game — vision AI detections
           </p>
           <DonutChart data={globalData} emptyMessage="No objects scanned across the arcade yet." />

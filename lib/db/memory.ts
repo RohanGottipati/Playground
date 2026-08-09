@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { AppError } from "@/lib/errors/AppError";
 import { normalizeObjectLabel } from "@/lib/utils/sanitize";
 import { EMPTY_HINTS, type GenerationHints } from "@/game/generation/hints";
-import { ACTIVE_SESSION_EVENT_TYPES, TICKER_EVENT_TYPES } from "./types";
+import { ACTIVE_SESSION_EVENT_TYPES, TELEMETRY_EVENT_TYPES } from "./types";
 import type { ComponentCatalogEntry } from "@/game/components/types";
 import type {
   ArcadeSort,
@@ -22,7 +22,6 @@ import type {
   SpatialEventRecord,
   StatsSnapshot,
   TelemetrySnapshot,
-  TickerEventType,
 } from "./types";
 
 type StoredInsight = GenerationInsightInput & { createdAt: string };
@@ -353,61 +352,62 @@ export class MemoryRepository implements Repository {
     };
   }
 
-  async getTelemetrySnapshot(gameId?: string): Promise<TelemetrySnapshot> {
+  async getTelemetrySnapshot(gameId: string): Promise<TelemetrySnapshot> {
     const store = state();
     const fiveMinutesAgo = Date.now() - 5 * 60_000;
-    const scopedEvents = gameId
-      ? store.events.filter((event) => event.gameId === gameId)
-      : store.events;
+    const scopedEvents = store.events.filter((event) => event.gameId === gameId);
+    const fatalityCount = scopedEvents.filter(
+      (event) => event.eventType === "player_died",
+    ).length;
 
-    const deathTotalsByGame: Record<string, number> = {};
-    for (const event of scopedEvents) {
-      if (event.eventType !== "death") continue;
-      deathTotalsByGame[event.gameId] = (deathTotalsByGame[event.gameId] ?? 0) + 1;
-    }
-
-    // Active sessions: distinct session_ids seen on a start/progress/complete
-    // event in the last 5 minutes. Deliberately excludes every other event
-    // type (deaths, likes, ...) — those must never move this count.
-    const activeSessionSets = new Map<string, Set<string>>();
+    const activeSessionIds = new Set<string>();
     for (const event of scopedEvents) {
       if (!event.sessionId) continue;
       if (!ACTIVE_SESSION_EVENT_TYPES.includes(event.eventType)) continue;
       if (new Date(event.createdAt).getTime() < fiveMinutesAgo) continue;
-      const set = activeSessionSets.get(event.gameId) ?? new Set<string>();
-      set.add(event.sessionId);
-      activeSessionSets.set(event.gameId, set);
-    }
-    const activeSessionsByGame: Record<string, number> = {};
-    for (const [gid, sessions] of activeSessionSets) {
-      activeSessionsByGame[gid] = sessions.size;
+      activeSessionIds.add(event.sessionId);
     }
 
-    const recentSpatialEvents: SpatialEventRecord[] = scopedEvents
-      .filter((event): event is typeof event & { eventType: TickerEventType } =>
-        TICKER_EVENT_TYPES.includes(event.eventType as TickerEventType),
-      )
-      .slice(-300)
+    const recentEvents: SpatialEventRecord[] = scopedEvents
+      .filter((event) => TELEMETRY_EVENT_TYPES.includes(
+        event.eventType as (typeof TELEMETRY_EVENT_TYPES)[number],
+      ))
+      .slice(-15)
       .reverse()
       .map((event) => {
         const payload = event.eventPayload;
         const x = typeof payload.x === "number" ? payload.x : null;
         const y = typeof payload.y === "number" ? payload.y : null;
-        const durationSeconds =
-          typeof payload.durationSeconds === "number" ? payload.durationSeconds : null;
+        const durationMs =
+          typeof payload.elapsedMs === "number" ? payload.elapsedMs : null;
         return {
           gameId: event.gameId,
           gameTitle: store.games.get(event.gameId)?.title ?? "Untitled",
-          eventType: event.eventType,
-          city: typeof payload.city === "string" ? payload.city : "Toronto",
+          eventType: event.eventType as (typeof TELEMETRY_EVENT_TYPES)[number],
+          city: typeof payload.city === "string" ? payload.city : null,
           x,
           y,
-          durationSeconds,
+          durationMs,
           createdAt: event.createdAt,
         };
       });
 
-    return { deathTotalsByGame, activeSessionsByGame, recentSpatialEvents };
+    const deathPoints = scopedEvents
+      .filter((event) => event.eventType === "player_died")
+      .slice(-20)
+      .reverse()
+      .flatMap((event) => {
+        const { x, y } = event.eventPayload;
+        return typeof x === "number" && typeof y === "number" ? [{ x, y }] : [];
+      });
+
+    return {
+      gameId,
+      fatalityCount,
+      activeSessions: activeSessionIds.size,
+      recentEvents,
+      deathPoints,
+    };
   }
 
   async toggleLike(gameId: string, anonymousSessionId: string): Promise<number> {

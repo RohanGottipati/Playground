@@ -1,7 +1,7 @@
 # Playground
 
 Arrange physical objects, take one photo, and play the 2D platformer your desk
-becomes — then publish it to a shared public arcade.
+becomes — then publish it to a shared public playground.
 
 **Arrange. Snap. Play. Publish.**
 
@@ -35,7 +35,7 @@ No prompts, no tile editors, no level-design knowledge, no account.
    physics and collision behavior.
 7. `POST /api/games/publish` assigns a unique slug and makes `/game/<slug>`
    public. Plays, deaths, collectibles and completions feed the leaderboard,
-   `/arcade` sorting and `/stats`.
+   `/playground` sorting and `/stats` (`/arcade` redirects for old links).
 
 ### Object → mechanic mapping
 
@@ -114,7 +114,7 @@ npm run dev
 Playground degrades cleanly when persistence is not configured:
 
 - **No Supabase credentials** → games, sessions, events and images live in the
-  server process (`lib/db/memory.ts`). The full create → play → publish → arcade
+  server process (`lib/db/memory.ts`). The full create → play → publish → playground
   → stats loop works, but data resets on restart.
 - **No Backboard credentials or chat entitlement** → photo analysis stops with
   a clear error and never claims a sample level came from the uploaded image.
@@ -144,7 +144,10 @@ selected independently from its safe fallback mechanic.
 `generation_insights` table and replaces the `game_summaries` view to expose
 each game's `mode`. `0007_phone_capture_sessions.sql` adds the private,
 short-lived pairing records used by QR phone capture; raw bearer tokens are
-never stored and the table has no anonymous access. After applying them,
+never stored and the table has no anonymous access.
+`0008_telemetry_dashboard.sql` adds service-role-only telemetry aggregates and
+partial indexes for exact per-game fatalities, active sessions, and recent
+spatial events. After applying them,
 sync the canonical 349-row catalog and optionally backfill older game specs:
 
 ```bash
@@ -181,7 +184,7 @@ npm run components:backfill  # add component IDs to legacy game specs
 
 ```
 app/                    routes and API handlers
-components/             UI: create flow, arcade, game shell, stats charts
+components/             UI: create flow, playground, game shell, stats dashboards
 game/                   engine-agnostic domain + Phaser scenes/entities
   generation/           normalize → assign mechanics → repair → validate → spec
 lib/backboard/          prompts, GPT-4o HTTP client and JSON parsing

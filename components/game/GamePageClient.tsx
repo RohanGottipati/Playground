@@ -9,13 +9,11 @@ export function GamePageClient({
   slug,
   spec,
   sourceImageUrl,
-  detectedObjectCount,
 }: {
   gameId: string;
   slug: string;
   spec: GameSpec;
   sourceImageUrl: string;
-  detectedObjectCount: number;
 }) {
   const router = useRouter();
   const shareUrl =
@@ -27,7 +25,6 @@ export function GamePageClient({
       spec={spec}
       sourceImageUrl={sourceImageUrl}
       shareUrl={shareUrl}
-      objectsScannedCount={detectedObjectCount}
       onRemix={() => router.push(`/create?remixOf=${gameId}`)}
     />
   );

@@ -1,6 +1,6 @@
 "use client";
 
-const PALETTE = ["#ffcf5c", "#7ce7c8", "#ff5d73", "#5f7adb", "#c62b47", "#f6efe2"];
+const PALETTE = ["#0068c9", "#34c759", "#ff9500", "#af52de", "#ff3b30", "#5ac8fa"];
 
 export type DonutDatum = { label: string; count: number };
 
@@ -14,7 +14,7 @@ export function DonutChart({
   const total = data.reduce((sum, row) => sum + row.count, 0);
 
   if (total === 0) {
-    return <p className="font-mono text-xs text-paper/50">{emptyMessage}</p>;
+    return <p className="font-inter text-xs text-appleGray">{emptyMessage}</p>;
   }
 
   const size = 160;
@@ -43,7 +43,7 @@ export function DonutChart({
   return (
     <div className="flex flex-wrap items-center gap-5">
       <svg viewBox={`0 0 ${size} ${size}`} className="h-40 w-40 shrink-0 -rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#14110f" strokeWidth={strokeWidth} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#ffffff" strokeWidth={strokeWidth} />
         {segments.map((segment) => (
           <circle
             key={segment.label}
@@ -61,7 +61,7 @@ export function DonutChart({
           </circle>
         ))}
       </svg>
-      <ul className="min-w-0 flex-1 space-y-1.5 font-mono text-[11px] uppercase text-paper/70">
+      <ul className="min-w-0 flex-1 space-y-1.5 font-inter text-[11px] text-appleGray">
         {segments.map((segment) => (
           <li key={segment.label} className="flex items-center gap-2">
             <span
@@ -70,7 +70,7 @@ export function DonutChart({
               aria-hidden
             />
             <span className="truncate">{segment.label}</span>
-            <span className="ml-auto text-paper/50">{segment.percent.toFixed(0)}%</span>
+            <span className="ml-auto text-appleInk">{segment.percent.toFixed(0)}%</span>
           </li>
         ))}
       </ul>

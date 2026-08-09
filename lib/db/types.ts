@@ -185,14 +185,12 @@ export type RecordEventInput = {
   payload?: Record<string, unknown>;
 };
 
-/**
- * The only two gameplay actions the live ticker narrates: round completions
- * and fatalities. Everything else is still recorded, just never rendered
- * in the feed.
- */
-export type TickerEventType = "death" | "clear";
+export type TelemetryEventType = "player_died" | "game_completed";
 
-export const TICKER_EVENT_TYPES: TickerEventType[] = ["death", "clear"];
+export const TELEMETRY_EVENT_TYPES: TelemetryEventType[] = [
+  "player_died",
+  "game_completed",
+];
 
 /**
  * The only events that move the "active sessions" count: starting a run
@@ -212,19 +210,21 @@ export const ACTIVE_SESSION_EVENT_TYPES: GameEventType[] = [
 export type SpatialEventRecord = {
   gameId: string;
   gameTitle: string;
-  eventType: TickerEventType;
-  city: string;
+  eventType: TelemetryEventType;
+  city: string | null;
   x: number | null;
   y: number | null;
-  durationSeconds: number | null;
+  durationMs: number | null;
   createdAt: string;
 };
 
 export type TelemetrySnapshot = {
-  deathTotalsByGame: Record<string, number>;
-  /** Events seen per game in the last 5 minutes — a rolling proxy for "currently playing". */
-  activeSessionsByGame: Record<string, number>;
-  recentSpatialEvents: SpatialEventRecord[];
+  gameId: string;
+  fatalityCount: number;
+  /** Distinct sessions with gameplay activity in the last five minutes. */
+  activeSessions: number;
+  recentEvents: SpatialEventRecord[];
+  deathPoints: { x: number; y: number }[];
 };
 
 export type SessionUpdate = {
@@ -272,12 +272,8 @@ export interface Repository {
   recordEvent(input: RecordEventInput): Promise<void>;
   getLeaderboard(gameId: string): Promise<Leaderboard>;
   getStats(): Promise<StatsSnapshot>;
-  /**
-   * Spatial/geo telemetry dashboard: death heatmaps, per-game fatalities,
-   * recent activity feed. Pass `gameId` to scope everything (recent events,
-   * fatalities, active sessions) to a single game.
-   */
-  getTelemetrySnapshot(gameId?: string): Promise<TelemetrySnapshot>;
+  /** Per-game spatial telemetry for the public live dashboard. */
+  getTelemetrySnapshot(gameId: string): Promise<TelemetrySnapshot>;
   toggleLike(gameId: string, anonymousSessionId: string): Promise<number>;
   registerMechanicDiscoveries(
     gameId: string,

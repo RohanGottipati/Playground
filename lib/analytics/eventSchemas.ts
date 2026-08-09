@@ -15,9 +15,11 @@ export const GameEventTypeSchema = z.enum([
   "game_remixed",
   "mechanic_discovered",
   "target_destroyed",
-  "death",
-  "clear",
 ]);
+
+export const TelemetryQuerySchema = z.object({
+  gameId: z.string().uuid(),
+});
 
 const PayloadValueSchema = z.union([z.string().max(200), z.number(), z.boolean()]);
 

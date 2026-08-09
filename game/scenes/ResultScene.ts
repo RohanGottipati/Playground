@@ -1,14 +1,18 @@
 import * as Phaser from "phaser";
-import type { GameBus, RunResult } from "@/game/bus";
+import type { ControlState, RunResult } from "@/game/bus";
+import { restartCompletedRun } from "@/game/restartCompletedRun";
 import { paletteForSpec } from "@/game/theme";
 import type { GameSpec } from "@/game/types";
 
 export class ResultScene extends Phaser.Scene {
+  private restarting = false;
+
   constructor() {
     super("ResultScene");
   }
 
   create(data: RunResult) {
+    this.restarting = false;
     const spec = this.registry.get("spec") as GameSpec;
     const palette = paletteForSpec(spec);
     const { width, height } = this.scale.gameSize;
@@ -42,11 +46,19 @@ export class ResultScene extends Phaser.Scene {
     text.setOrigin(0.5, 0.5);
     text.setScrollFactor(0);
 
-    this.input.keyboard?.once("keydown-R", () => {
-      const bus = this.registry.get("bus") as GameBus;
-      bus.emit("gameEvent", { type: "game_restarted" });
-      this.scene.stop();
-      this.scene.get("GameScene").scene.restart();
-    });
+    this.input.keyboard?.once("keydown-R", () => this.restartCompletedRun());
+  }
+
+  update() {
+    const controls = this.registry.get("controls") as ControlState;
+    if (!controls?.restart) return;
+    controls.restart = false;
+    this.restartCompletedRun();
+  }
+
+  private restartCompletedRun() {
+    if (this.restarting) return;
+    this.restarting = true;
+    restartCompletedRun(this);
   }
 }

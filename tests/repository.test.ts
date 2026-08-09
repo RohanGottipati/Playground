@@ -85,6 +85,67 @@ describe("MemoryRepository", () => {
     expect(stats.totalDeaths).toBe(5);
   });
 
+  it("returns exact, game-scoped telemetry from canonical events", async () => {
+    const db = new MemoryRepository();
+    const selected = await draft(db);
+    await db.publishGame({
+      id: selected.id,
+      title: "Selected Game",
+      creatorName: "Tester",
+      slug: "selected-game",
+    });
+    const other = await draft(db);
+    await db.publishGame({
+      id: other.id,
+      title: "Other Game",
+      creatorName: "Tester",
+      slug: "other-game",
+    });
+
+    await db.recordEvent({
+      gameId: selected.id,
+      sessionId: "session-a",
+      eventType: "game_started",
+    });
+    await db.recordEvent({
+      gameId: selected.id,
+      sessionId: "session-a",
+      eventType: "player_died",
+      payload: { x: 120, y: 340, elapsedMs: 9000, city: "Ottawa" },
+    });
+    await db.recordEvent({
+      gameId: selected.id,
+      sessionId: "session-b",
+      eventType: "checkpoint_reached",
+    });
+    await db.recordEvent({
+      gameId: selected.id,
+      sessionId: "session-a",
+      eventType: "game_completed",
+      payload: { x: 1500, y: 220, elapsedMs: 12000 },
+    });
+    await db.recordEvent({
+      gameId: other.id,
+      eventType: "player_died",
+      payload: { x: 1, y: 2 },
+    });
+
+    const telemetry = await db.getTelemetrySnapshot(selected.id);
+    expect(telemetry.gameId).toBe(selected.id);
+    expect(telemetry.fatalityCount).toBe(1);
+    expect(telemetry.activeSessions).toBe(2);
+    expect(telemetry.deathPoints).toEqual([{ x: 120, y: 340 }]);
+    expect(telemetry.recentEvents.map((event) => event.eventType)).toEqual([
+      "game_completed",
+      "player_died",
+    ]);
+    expect(telemetry.recentEvents[1]).toMatchObject({
+      gameTitle: "Selected Game",
+      city: "Ottawa",
+      durationMs: 9000,
+    });
+  });
+
   it("toggles likes per anonymous session", async () => {
     const db = new MemoryRepository();
     const record = await draft(db);

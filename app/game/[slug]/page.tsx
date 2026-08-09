@@ -203,7 +203,6 @@ export default async function GamePage({ params }: Props) {
             slug={slug}
             spec={spec}
             sourceImageUrl={game.sourceImageUrl}
-            detectedObjectCount={game.detectedObjectCount}
           />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <LeaderboardPanel leaderboard={leaderboard} />

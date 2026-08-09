@@ -38,45 +38,6 @@ export async function track(input: TrackInput): Promise<void> {
   }
 }
 
-export type SpatialEventInput = {
-  eventType: "death" | "clear";
-  gameId: string;
-  x: number;
-  y: number;
-  objectsScannedCount: number;
-  durationSeconds: number;
-  userObjectsScannedCount: number;
-};
-
-/**
- * Fire-and-forget spatial telemetry for death/clear heatmaps. Kept separate
- * from `track()` so a lookup failure or malformed payload here can never
- * affect session/run tracking.
- */
-export async function recordSpatialEvent(input: SpatialEventInput): Promise<void> {
-  try {
-    await fetch("/api/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        gameId: input.gameId,
-        eventType: input.eventType,
-        anonymousSessionId: anonymousSessionId(),
-        payload: {
-          x: input.x,
-          y: input.y,
-          objectsScannedCount: input.objectsScannedCount,
-          durationSeconds: Math.round(input.durationSeconds * 10) / 10,
-          user_objects_scanned_count: input.userObjectsScannedCount,
-        },
-      }),
-      keepalive: true,
-    });
-  } catch (error) {
-    console.warn("spatial event submission failed", error);
-  }
-}
-
 export async function startSession(gameId: string): Promise<string | undefined> {
   try {
     const response = await fetch("/api/events/session", {

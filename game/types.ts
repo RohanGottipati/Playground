@@ -241,6 +241,4 @@ export type GameEventType =
   | "game_completed"
   | "game_restarted"
   | "game_remixed"
-  | "mechanic_discovered"
-  | "death"
-  | "clear";
+  | "mechanic_discovered";

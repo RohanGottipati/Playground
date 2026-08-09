@@ -1,24 +1,13 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
-import { Activity, Skull, Boxes } from "lucide-react";
 import type { ReactNode } from "react";
 
-function MetricShell({
-  icon: Icon,
-  label,
-  children,
-}: {
-  icon: LucideIcon;
-  label: string;
-  children: ReactNode;
-}) {
+function MetricShell({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="relative rounded-2xl border-[3px] border-ink bg-cabinet/90 p-4 shadow-sticker">
-      <div className="flex items-center gap-2 text-paper/60">
-        <Icon className="h-4 w-4" aria-hidden />
-        <p className="font-mono text-[11px] uppercase tracking-wide">{label}</p>
-      </div>
+    <div className="rounded-2xl bg-appleBg p-4">
+      <p className="font-inter text-xs font-medium uppercase tracking-wide text-appleGray">
+        {label}
+      </p>
       {children}
     </div>
   );
@@ -32,32 +21,32 @@ export function ObjectsScannedCard({
   globalTotal: number;
 }) {
   return (
-    <MetricShell icon={Boxes} label="Physical objects scanned">
-      <div className="mt-2 flex items-end gap-4">
+    <MetricShell label="Physical objects scanned">
+      <div className="mt-2 flex items-end gap-5">
         <div>
-          <p className="marquee-title text-2xl text-token">{globalTotal.toLocaleString()}</p>
-          <p className="font-mono text-[10px] uppercase text-paper/50">Global community total</p>
+          <p className="font-inter text-2xl font-medium text-appleInk">
+            {globalTotal.toLocaleString()}
+          </p>
+          <p className="font-inter text-[11px] text-appleGray">Community</p>
         </div>
         <div>
-          <p className="marquee-title text-lg text-screen">{yourTotal.toLocaleString()}</p>
-          <p className="font-mono text-[10px] uppercase text-paper/50">Your total</p>
+          <p className="font-inter text-lg font-medium text-appleBlue">
+            {yourTotal.toLocaleString()}
+          </p>
+          <p className="font-inter text-[11px] text-appleGray">This browser</p>
         </div>
       </div>
     </MetricShell>
   );
 }
 
-export function FatalitiesCard({
-  count,
-  gameTitle,
-}: {
-  count: number;
-  gameTitle: string;
-}) {
+export function FatalitiesCard({ count, gameTitle }: { count: number; gameTitle: string }) {
   return (
-    <MetricShell icon={Skull} label="Fatalities — selected game">
-      <p className="marquee-title mt-2 text-2xl text-marquee">{count.toLocaleString()}</p>
-      <p className="truncate font-mono text-[10px] uppercase text-paper/50">{gameTitle}</p>
+    <MetricShell label="Fatalities — selected game">
+      <p className="mt-2 font-inter text-2xl font-medium text-appleInk">
+        {count.toLocaleString()}
+      </p>
+      <p className="truncate font-inter text-[11px] text-appleGray">{gameTitle}</p>
     </MetricShell>
   );
 }
@@ -70,10 +59,12 @@ export function ActiveSessionsCard({
   gameTitle: string;
 }) {
   return (
-    <MetricShell icon={Activity} label="Active sessions — selected game">
-      <p className="marquee-title mt-2 text-2xl text-screen">{count.toLocaleString()}</p>
-      <p className="truncate font-mono text-[10px] uppercase text-paper/50">
-        {gameTitle} · last 5 min
+    <MetricShell label="Active sessions — selected game">
+      <p className="mt-2 font-inter text-2xl font-medium text-appleInk">
+        {count.toLocaleString()}
+      </p>
+      <p className="truncate font-inter text-[11px] text-appleGray">
+        {gameTitle} · last 5 minutes
       </p>
     </MetricShell>
   );
