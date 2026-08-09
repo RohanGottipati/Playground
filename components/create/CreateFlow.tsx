@@ -8,6 +8,7 @@ import { compressImage } from "@/lib/utils/imageCompression";
 import type { SceneAnalysis } from "@/lib/backboard/schemas";
 import type { GameSpec } from "@/game/types";
 import { CameraCapture } from "./CameraCapture";
+import { CreateSteps } from "./CreateSteps";
 import { GenerationProgress, type GenerationStep } from "./GenerationProgress";
 import { PublishPanel } from "./PublishPanel";
 import {
@@ -412,6 +413,8 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
 
   return (
     <div className="space-y-6">
+      <CreateSteps phase={phase} />
+
       {phase === "capture" ? (
         <div className="space-y-4 rounded-3xl bg-appleBg p-6">
           <h2
@@ -455,7 +458,7 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
           <div className="rounded-3xl bg-appleBg p-6">
             <h2
               className="mb-4 font-inter font-medium text-appleInk"
-              style={{ fontSize: 18, letterSpacing: "-0.02em" }}
+              style={{ fontSize: 20, letterSpacing: "-0.03em" }}
             >
               Building your game
             </h2>
@@ -470,7 +473,7 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
           <div className="space-y-4 rounded-3xl bg-appleBg p-6">
             <h2
               className="font-inter font-medium text-appleInk"
-              style={{ fontSize: 18, letterSpacing: "-0.02em" }}
+              style={{ fontSize: 20, letterSpacing: "-0.03em" }}
             >
               We could not analyze this photo
             </h2>
