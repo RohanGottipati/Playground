@@ -2,7 +2,7 @@
 
 import type { HudState } from "@/game/bus";
 import { formatMs } from "@/components/ui/formatters";
-import { ModeBadge } from "@/components/ui/Badge";
+import { modeMeta } from "@/components/ui/difficulty";
 
 /** One instrument in the HUD cluster: a small label above a big value. */
 function Gauge({
@@ -18,13 +18,19 @@ function Gauge({
 }) {
   return (
     <div
-      className="flex flex-col items-center rounded-lg border border-paper/10 bg-ink/60 px-2.5 py-1 leading-tight"
+      className="flex flex-col items-center justify-center rounded-xl bg-white px-3 py-1.5 leading-tight"
       aria-label={ariaLabel}
     >
-      <span className="font-mono text-[8px] uppercase tracking-widest text-paper/40">
+      <span
+        className="font-inter text-[10px] font-medium uppercase tracking-wide text-appleGray"
+        style={{ letterSpacing: "-0.01em" }}
+      >
         {label}
       </span>
-      <span className={`font-display text-sm ${tone ?? "text-paper"}`}>
+      <span
+        className={`font-inter font-medium ${tone ?? "text-appleInk"}`}
+        style={{ fontSize: 15, letterSpacing: "-0.02em" }}
+      >
         {value}
       </span>
     </div>
@@ -48,18 +54,24 @@ function ProgressGauge({
   const pct = total > 0 ? Math.min(100, (current / total) * 100) : 0;
   return (
     <div
-      className="min-w-[92px] rounded-lg border border-paper/10 bg-ink/60 px-2.5 py-1"
+      className="min-w-[92px] rounded-xl bg-white px-3 py-1.5"
       aria-label={`${label}: ${current} of ${total}`}
     >
       <div className="flex items-baseline justify-between gap-2">
-        <span className="font-mono text-[8px] uppercase tracking-widest text-paper/40">
+        <span
+          className="font-inter text-[10px] font-medium uppercase tracking-wide text-appleGray"
+          style={{ letterSpacing: "-0.01em" }}
+        >
           {label}
         </span>
-        <span className={`font-display text-sm ${tone}`}>
+        <span
+          className={`font-inter font-medium ${tone}`}
+          style={{ fontSize: 15, letterSpacing: "-0.02em" }}
+        >
           {current}/{total}
         </span>
       </div>
-      <div className="mt-1 h-1 overflow-hidden rounded-full bg-paper/15">
+      <div className="mt-1 h-1 overflow-hidden rounded-full bg-appleGray/20">
         <div
           className={`h-full rounded-full transition-[width] duration-300 ${bar}`}
           style={{ width: `${pct}%` }}
@@ -80,17 +92,29 @@ export function GameHUD({
 }) {
   const rushCritical = (hud.timeLeftMs ?? Infinity) < 10_000;
   const targetsDown = (hud.totalTargets ?? 0) - (hud.targetsLeft ?? 0);
+  const meta = mode && mode !== "classic" ? modeMeta(mode) : null;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-[3px] border-ink bg-cabinet px-4 py-2 shadow-stickerSm">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-appleBg px-4 py-3">
       <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate font-display text-sm uppercase text-token">
+        <span
+          className="truncate font-inter font-medium text-appleInk"
+          style={{ fontSize: 15, letterSpacing: "-0.02em" }}
+        >
           {title}
         </span>
-        {mode && mode !== "classic" ? <ModeBadge mode={mode} /> : null}
+        {meta ? (
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-inter text-xs font-medium text-appleInk"
+            style={{ letterSpacing: "-0.01em" }}
+          >
+            <span aria-hidden>{meta.icon}</span> {meta.label}
+          </span>
+        ) : null}
         {hud.goalLocked ? (
           <span
-            className="font-mono text-[10px] uppercase text-marquee"
+            className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 font-inter text-xs font-medium text-appleGray"
+            style={{ letterSpacing: "-0.01em" }}
             aria-label="goal locked"
           >
             🔒 Locked
@@ -104,8 +128,8 @@ export function GameHUD({
             label="Drones"
             current={targetsDown}
             total={hud.totalTargets}
-            tone="text-marquee"
-            bar="bg-marquee"
+            tone="text-appleInk"
+            bar="bg-appleBlue"
           />
         ) : null}
         {hud.dodgeTarget ? (
@@ -113,8 +137,8 @@ export function GameHUD({
             label="Dodged"
             current={hud.avoided ?? 0}
             total={hud.dodgeTarget}
-            tone="text-screen"
-            bar="bg-screen"
+            tone="text-appleInk"
+            bar="bg-appleBlue"
           />
         ) : null}
         {hud.totalCollectibles ? (
@@ -122,35 +146,37 @@ export function GameHUD({
             label="Loot"
             current={hud.collectibles}
             total={hud.totalCollectibles}
-            tone="text-token"
-            bar="bg-token"
+            tone="text-appleInk"
+            bar="bg-appleBlue"
           />
         ) : null}
         {hud.timeLeftMs !== undefined ? (
           <div
-            className={`min-w-[92px] rounded-lg border px-2.5 py-1 ${
-              rushCritical
-                ? "animate-pulse border-marquee bg-marquee/15"
-                : "border-paper/10 bg-ink/60"
+            className={`min-w-[92px] rounded-xl px-3 py-1.5 ${
+              rushCritical ? "animate-pulse bg-appleRed/10" : "bg-white"
             }`}
             aria-label="time remaining"
           >
             <div className="flex items-baseline justify-between gap-2">
-              <span className="font-mono text-[8px] uppercase tracking-widest text-paper/40">
+              <span
+                className="font-inter text-[10px] font-medium uppercase tracking-wide text-appleGray"
+                style={{ letterSpacing: "-0.01em" }}
+              >
                 Left
               </span>
               <span
-                className={`font-display text-sm ${
-                  rushCritical ? "text-marquee" : "text-paper"
+                className={`font-inter font-medium ${
+                  rushCritical ? "text-appleRed" : "text-appleInk"
                 }`}
+                style={{ fontSize: 15, letterSpacing: "-0.02em" }}
               >
                 {formatMs(Math.max(0, hud.timeLeftMs))}
               </span>
             </div>
-            <div className="mt-1 h-1 overflow-hidden rounded-full bg-paper/15">
+            <div className="mt-1 h-1 overflow-hidden rounded-full bg-appleGray/20">
               <div
                 className={`h-full rounded-full transition-[width] duration-300 ${
-                  rushCritical ? "bg-marquee" : "bg-screen"
+                  rushCritical ? "bg-appleRed" : "bg-appleBlue"
                 }`}
                 style={{
                   width: `${Math.max(
@@ -166,7 +192,7 @@ export function GameHUD({
         <Gauge
           label="Deaths"
           value={String(hud.deaths)}
-          tone={hud.deaths > 0 ? "text-marquee" : undefined}
+          tone={hud.deaths > 0 ? "text-appleRed" : undefined}
           ariaLabel="deaths"
         />
       </div>

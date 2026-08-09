@@ -20,6 +20,7 @@ export default {
         appleGray: "#6e6e73",
         appleBg: "#f5f5f7",
         appleBlue: "#0068c9",
+        appleRed: "#ff3b30",
       },
       fontFamily: {
         display: ["var(--font-display)", "system-ui", "sans-serif"],
