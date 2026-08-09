@@ -19,6 +19,7 @@ import type {
   GameSummary,
   GenerationInsightInput,
   Leaderboard,
+  LiveOriginSnapshot,
   MechanicDiscoveryRecord,
   PublishInput,
   RecordEventInput,
@@ -633,6 +634,24 @@ export class SupabaseRepository implements Repository {
       activeSessions: Number(countRow?.active_sessions ?? 0),
       recentEvents,
       deathPoints,
+    };
+  }
+
+  async getLiveOriginSnapshot(): Promise<LiveOriginSnapshot> {
+    const client = this.client;
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60_000).toISOString();
+
+    const { data, error } = await client.rpc("get_global_telemetry_origins", {
+      p_active_since: fiveMinutesAgo,
+    });
+    if (error) fail("getLiveOriginSnapshot", error);
+
+    type OriginRow = { active_sessions: number | string; city_count: number | string };
+    const row = ((data ?? []) as OriginRow[])[0];
+
+    return {
+      activeSessions: Number(row?.active_sessions ?? 0),
+      cityCount: Number(row?.city_count ?? 0),
     };
   }
 

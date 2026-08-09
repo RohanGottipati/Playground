@@ -13,6 +13,7 @@ import type {
   GameSummary,
   GenerationInsightInput,
   Leaderboard,
+  LiveOriginSnapshot,
   MechanicDiscoveryRecord,
   PublishInput,
   RecordEventInput,
@@ -408,6 +409,27 @@ export class MemoryRepository implements Repository {
       recentEvents,
       deathPoints,
     };
+  }
+
+  async getLiveOriginSnapshot(): Promise<LiveOriginSnapshot> {
+    const store = state();
+    const fiveMinutesAgo = Date.now() - 5 * 60_000;
+
+    const activeSessionIds = new Set<string>();
+    const cities = new Set<string>();
+    for (const event of store.events) {
+      if (new Date(event.createdAt).getTime() < fiveMinutesAgo) continue;
+      const city = event.eventPayload.city;
+      if (typeof city === "string" && city) cities.add(city);
+      if (
+        event.sessionId &&
+        ACTIVE_SESSION_EVENT_TYPES.includes(event.eventType)
+      ) {
+        activeSessionIds.add(event.sessionId);
+      }
+    }
+
+    return { activeSessions: activeSessionIds.size, cityCount: cities.size };
   }
 
   async toggleLike(gameId: string, anonymousSessionId: string): Promise<number> {

@@ -227,6 +227,18 @@ export type TelemetrySnapshot = {
   deathPoints: { x: number; y: number }[];
 };
 
+/**
+ * Site-wide (not per-game) live snapshot of where gameplay is happening
+ * right now, derived from the same deployment-supplied city header used by
+ * the per-game dashboard. No IP address is stored or sent anywhere.
+ */
+export type LiveOriginSnapshot = {
+  /** Distinct sessions with gameplay activity in the last five minutes, across every game. */
+  activeSessions: number;
+  /** Distinct cities seen in that same window. */
+  cityCount: number;
+};
+
 export type SessionUpdate = {
   deathCount?: number;
   collectiblesCollected?: number;
@@ -274,6 +286,8 @@ export interface Repository {
   getStats(): Promise<StatsSnapshot>;
   /** Per-game spatial telemetry for the public live dashboard. */
   getTelemetrySnapshot(gameId: string): Promise<TelemetrySnapshot>;
+  /** Site-wide live session + city count, for the recap globe hover card. */
+  getLiveOriginSnapshot(): Promise<LiveOriginSnapshot>;
   toggleLike(gameId: string, anonymousSessionId: string): Promise<number>;
   registerMechanicDiscoveries(
     gameId: string,
