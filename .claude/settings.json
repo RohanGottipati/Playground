@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chromium-cli --session hud)",
+      "Bash(where chromium-cli *)",
+      "Bash(node \"C:\\\\Users\\\\Harnake\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Harnake-Documents-Playground\\\\cc2344f8-9f22-4cfc-87cf-0648c92de83e\\\\scratchpad\\\\shot.mjs\")",
+      "Bash(cp \"C:\\\\Users\\\\Harnake\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Harnake-Documents-Playground\\\\cc2344f8-9f22-4cfc-87cf-0648c92de83e\\\\scratchpad\\\\shot.mjs\" ./shot-tmp.mjs)",
+      "Bash(node shot-tmp.mjs)",
+      "Bash(rm -f shot-tmp.mjs)"
+    ]
+  }
+}
