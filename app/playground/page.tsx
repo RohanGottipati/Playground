@@ -27,7 +27,7 @@ export default async function PlaygroundPage() {
 
   return (
     <>
-      <div className="fixed inset-0 -z-10 bg-[#f2eeee]" />
+      <div className="fixed inset-0 -z-10 bg-white" />
       <div className="space-y-10">
         <header className="space-y-1">
           <p className="font-inter text-sm font-medium uppercase tracking-wide text-appleGray">
