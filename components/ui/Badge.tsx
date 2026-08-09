@@ -23,6 +23,22 @@ export function Badge({
   );
 }
 
+const MODE_LABELS: Record<string, { label: string; icon: string; tone: "paper" | "marquee" | "token" | "screen" }> = {
+  classic: { label: "Platformer", icon: "🕹", tone: "paper" },
+  shooter: { label: "Shooter", icon: "🎯", tone: "marquee" },
+  skyfall: { label: "Skyfall", icon: "☄", tone: "screen" },
+  rush: { label: "Rush", icon: "⏳", tone: "token" },
+};
+
+export function ModeBadge({ mode }: { mode: string }) {
+  const entry = MODE_LABELS[mode] ?? MODE_LABELS.classic;
+  return (
+    <Badge tone={entry.tone}>
+      <span aria-hidden>{entry.icon}</span> {entry.label}
+    </Badge>
+  );
+}
+
 export function DifficultyBadge({ difficulty }: { difficulty: number }) {
   const labels = ["Gentle", "Easy", "Tricky", "Hard", "Brutal"];
   const label = labels[Math.min(4, Math.max(0, difficulty - 1))];

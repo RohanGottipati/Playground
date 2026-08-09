@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { DifficultyBadge } from "@/components/ui/Badge";
+import { DifficultyBadge, ModeBadge } from "@/components/ui/Badge";
 import { formatMs, formatPercent } from "@/components/ui/formatters";
 import { anonymousSessionId } from "@/lib/analytics/track";
 import type { GameSummary } from "@/lib/db/types";
@@ -66,7 +66,10 @@ export function ArcadeCabinet({ game }: { game: GameSummary }) {
             {game.parentGameId ? " · remix" : ""}
           </p>
         </div>
-        <DifficultyBadge difficulty={game.difficulty} />
+        <div className="flex flex-col items-end gap-1">
+          <DifficultyBadge difficulty={game.difficulty} />
+          <ModeBadge mode={game.mode} />
+        </div>
       </div>
 
       <dl className="grid grid-cols-3 gap-2 font-mono text-[11px] uppercase text-paper/70">

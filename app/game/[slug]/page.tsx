@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GamePageClient } from "@/components/game/GamePageClient";
 import { LeaderboardPanel } from "@/components/game/LeaderboardPanel";
-import { DifficultyBadge } from "@/components/ui/Badge";
+import { DifficultyBadge, ModeBadge } from "@/components/ui/Badge";
 import { repository } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +45,7 @@ export default async function GamePage({ params }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <ModeBadge mode={game.gameSpec.mode ?? "classic"} />
           <DifficultyBadge difficulty={game.difficulty} />
           <Link href="/arcade" className="btn-ghost px-3 py-2 text-xs">
             Back to arcade

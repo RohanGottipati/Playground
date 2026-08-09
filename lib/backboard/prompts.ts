@@ -2,7 +2,7 @@
  * Prompts are versioned in source control. Bump PROMPT_VERSION on any change so
  * stored generation metadata stays meaningful.
  */
-export const PROMPT_VERSION = "3";
+export const PROMPT_VERSION = "4";
 
 export const SYSTEM_PROMPT = `You are the visual scene analyst for Playground, a platform that turns a
 single photograph of one or more physical objects into a 2D platformer.
@@ -26,7 +26,10 @@ Rules:
 11. The final application, not you, controls exact game physics and
     playability.
 12. If uncertain, lower confidence and use "unknown" properties.
-13. Do not generate JavaScript, game code, or database instructions.`;
+13. Do not generate JavaScript, game code, or database instructions.
+14. Use generic object names (e.g. "soda can", "phone", "sneaker"); never
+    brand names, product names, model numbers, or logo text.
+15. titleSuggestion must not contain brand or product names.`;
 
 export const USER_PROMPT = `Analyze the attached image as a physical layout for a 2D platformer.
 
@@ -40,6 +43,9 @@ Return:
 - physical properties
 - one supported gameplay role per object
 - warnings if the image is unsuitable
+
+Label every object generically ("soda can", not a brand or product name);
+the title suggestion must also stay brand-free.
 
 Allowed physical properties:
 large, small, flat, tall, round, long, thin, sharp, soft, rigid,

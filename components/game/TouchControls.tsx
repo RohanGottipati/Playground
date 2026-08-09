@@ -5,11 +5,12 @@ import type { ControlState } from "@/game/bus";
 type Props = {
   controls: ControlState | null;
   onRestart: () => void;
+  canShoot?: boolean;
 };
 
 function holdHandlers(
   controls: ControlState | null,
-  key: "left" | "right" | "jump",
+  key: "left" | "right" | "jump" | "shoot",
 ) {
   const set = (value: boolean) => {
     if (controls) controls[key] = value;
@@ -27,7 +28,7 @@ function holdHandlers(
 }
 
 /** Always-visible touch controls: the game must be playable on a phone. */
-export function TouchControls({ controls, onRestart }: Props) {
+export function TouchControls({ controls, onRestart, canShoot = false }: Props) {
   return (
     // touch-none: repeated taps while playing must not zoom the browser.
     <div className="flex touch-none select-none items-center justify-between gap-3 md:hidden">
@@ -58,6 +59,16 @@ export function TouchControls({ controls, onRestart }: Props) {
         >
           ⟳
         </button>
+        {canShoot ? (
+          <button
+            type="button"
+            aria-label="Shoot"
+            className="btn-secondary h-16 w-16 text-lg"
+            {...holdHandlers(controls, "shoot")}
+          >
+            🎯
+          </button>
+        ) : null}
         <button
           type="button"
           aria-label="Jump"

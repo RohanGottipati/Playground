@@ -67,6 +67,8 @@ export function scrubBrandNames(value: string): string {
   }
   // Strip dangling model suffixes left behind, e.g. "phone 15 pro" -> "phone".
   output = output.replace(/(?<=\w)\s+\d{1,4}(\s?(pro|max|plus|ultra|mini|air|se))?\s*$/gi, "");
+  // Collapse duplicated words a replacement can create: "toy brick brick".
+  output = output.replace(/\b(\w+)( \1\b)+/gi, "$1");
   return collapseSpaces(output) || "object";
 }
 

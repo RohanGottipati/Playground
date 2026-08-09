@@ -3,6 +3,7 @@
 export type GenerationStep =
   | "upload"
   | "analyze"
+  | "design"
   | "map"
   | "build"
   | "validate"
@@ -11,6 +12,7 @@ export type GenerationStep =
 const STEPS: { id: GenerationStep; label: string }[] = [
   { id: "upload", label: "Uploading your photo" },
   { id: "analyze", label: "Finding objects" },
+  { id: "design", label: "Designing the art kit (Magic Patterns)" },
   { id: "map", label: "Turning objects into mechanics" },
   { id: "build", label: "Building the level" },
   { id: "validate", label: "Checking it can be finished" },

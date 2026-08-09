@@ -42,6 +42,9 @@ export function GameResults({
           label="Collected"
           value={`${result.collectibles}/${result.totalCollectibles}`}
         />
+        {result.targetsDestroyed !== undefined ? (
+          <Stat label="Drones down" value={String(result.targetsDestroyed)} />
+        ) : null}
         <Stat
           label="Community best"
           value={formatMs(leaderboard?.fastestMs ?? null)}

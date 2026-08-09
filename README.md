@@ -44,7 +44,61 @@ No prompts, no tile editors, no level-design knowledge, no account.
 | sharp things (scissors, forks, keys) | `hazard` |
 | small trinkets (erasers, coins, caps) | `collectible` |
 | containers, rings, mugs (in pairs) | `portal` |
+| hovering drones (shooter mode only) | `target` |
 | the farthest reachable landmark | `goal` |
+
+## Game modes & rules popup
+
+Every run is seeded (`spec.seed`), so the same photo produces a different game
+each time while published games replay identically. A weighted, seeded picker
+(`game/generation/selectMode.ts`) chooses one of four modes based on the
+photographed objects and what the database has learned from previous runs:
+
+- **classic** — reach the exit door.
+- **shooter** — destroy hovering drones with projectiles (ammo is a detected
+  round/small object, donut fallback) before the goal unlocks. Projectiles fly
+  straight and pass through platforms so every drone is always hittable.
+- **skyfall** — detected objects rain from the sky; touching one is fatal. A
+  safe zone around spawn is never bombarded.
+- **rush** — grab every collectible before a generous timer expires; running
+  out restarts the run, never bricks it.
+
+Modes are applied *after* the level is validated and only ever add floating
+entities, so the verified route to the goal cannot break. If a mode cannot
+place its entities the run degrades to classic — a locked goal is never
+shipped. Each spec carries mode-specific `rules`
+(`game/generation/rules.ts`) rendered as a pre-game popup; the scene idles
+(physics paused, no timer) until the player presses Play. Titles and object
+labels are scrubbed of brand/product names (`lib/utils/genericName.ts`) both
+in the analysis prompt and again at generation time.
+
+## Magic Patterns design flow
+
+```
+[Prompt] → [AI Agent] → (MCP/API call) → [Magic Patterns] → [Editor URL & Spec] → [Adapts Code]
+```
+
+When `MAGIC_PATTERNS_API_KEY` is set, the generate route makes a server-side
+REST call (the MCP-server-call equivalent for a web runtime) to
+`POST https://api.magicpatterns.com/api/v2/pattern` with a design prompt built
+from the spec plus the source photo (`lib/magicpatterns/client.ts`). The
+returned source files are mined for a palette
+(`lib/magicpatterns/adapt.ts`) that tints the Phaser theme
+(`paletteForSpec` in `game/theme.ts`), and the editor/preview URLs are stored
+on `spec.magicPatterns` and surfaced in the create flow. The call is
+best-effort with a timeout (`MAGIC_PATTERNS_TIMEOUT_MS`, default 25s) and can
+never fail generation.
+
+## Learning loop
+
+Every generation writes a row to `generation_insights` (mode, seed, title,
+labels, mechanics, Magic Patterns id — service-role only, migration
+`0006_generation_learning.sql`). The next generation reads
+`getGenerationHints()` — the last 12 modes/titles plus per-mode completion
+rates joined from sessions — to avoid repeating recent modes and titles and to
+demote modes with under 10% completion over 8+ plays. Hint reads and insight
+writes are non-fatal everywhere: a database without migration 0006 simply
+yields empty hints.
 
 ## Running locally
 
@@ -82,7 +136,10 @@ data readable by anonymous clients while all writes go through the service role.
 `0002_storage.sql` creates the public `source-images` and `game-thumbnails`
 buckets. `0004_component_catalog.sql` creates the RLS-protected component
 registry. `0005_renderable_object_components.sql` lets exact object artwork be
-selected independently from its safe fallback mechanic. After applying them,
+selected independently from its safe fallback mechanic.
+`0006_generation_learning.sql` adds the service-role-only
+`generation_insights` table and replaces the `game_summaries` view to expose
+each game's `mode`. After applying them,
 sync the canonical 349-row catalog and optionally backfill older game specs:
 
 ```bash
@@ -110,8 +167,10 @@ npm run components:backfill  # add component IDs to legacy game specs
 
 ## Controls
 
-- Desktop: `A`/`←` and `D`/`→` to move, `W`/`↑`/`Space` to jump, `R` to restart.
-- Mobile: on-screen left / right / jump / restart buttons.
+- Desktop: `A`/`←` and `D`/`→` to move, `W`/`↑`/`Space` to jump, `X`/`F` to
+  shoot (shooter mode), `R` to restart.
+- Mobile: on-screen left / right / jump / restart buttons, plus a shoot button
+  in shooter mode.
 
 ## Layout
 

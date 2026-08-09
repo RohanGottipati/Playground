@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
 import type { RunResult } from "@/game/bus";
-import { paletteForTheme } from "@/game/theme";
+import { paletteForSpec } from "@/game/theme";
 import type { GameSpec } from "@/game/types";
 
 export class ResultScene extends Phaser.Scene {
@@ -10,7 +10,7 @@ export class ResultScene extends Phaser.Scene {
 
   create(data: RunResult) {
     const spec = this.registry.get("spec") as GameSpec;
-    const palette = paletteForTheme(spec.theme);
+    const palette = paletteForSpec(spec);
     const { width, height } = this.scale.gameSize;
 
     const overlay = this.add.rectangle(

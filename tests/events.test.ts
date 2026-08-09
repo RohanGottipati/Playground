@@ -14,6 +14,15 @@ describe("EventRequestSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts shooter target_destroyed events", () => {
+    const result = EventRequestSchema.safeParse({
+      gameId: randomUUID(),
+      eventType: "target_destroyed",
+      payload: { remaining: 2 },
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects unknown event types", () => {
     const result = EventRequestSchema.safeParse({
       gameId: randomUUID(),

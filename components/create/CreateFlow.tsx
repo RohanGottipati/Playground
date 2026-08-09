@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { GamePlayer } from "@/components/game/GamePlayer";
-import { DifficultyBadge } from "@/components/ui/Badge";
+import { DifficultyBadge, ModeBadge } from "@/components/ui/Badge";
 import { compressImage } from "@/lib/utils/imageCompression";
 import type { SceneAnalysis } from "@/lib/backboard/schemas";
 import type { GameSpec } from "@/game/types";
@@ -106,12 +106,23 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
       setPhase("working");
       setStep("analyze");
 
-      const response = await fetch("/api/games/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...upload, parentGameId }),
-      });
-      const generated = (await response.json()) as GenerateResponse & ApiErrorBody;
+      // One request powers analysis + design; sequence the visuals optimistically.
+      const designTimer = setTimeout(() => setStep("design"), 8000);
+      const mapTimer = setTimeout(() => setStep("map"), 16000);
+
+      let response: Response;
+      let generated: GenerateResponse & ApiErrorBody;
+      try {
+        response = await fetch("/api/games/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...upload, parentGameId }),
+        });
+        generated = (await response.json()) as GenerateResponse & ApiErrorBody;
+      } finally {
+        clearTimeout(designTimer);
+        clearTimeout(mapTimer);
+      }
       if (!response.ok) {
         throw requestError(
           generated,
@@ -252,6 +263,7 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
+              <ModeBadge mode={result.gameSpec.mode ?? "classic"} />
               <DifficultyBadge difficulty={result.gameSpec.difficulty} />
               <span className="font-mono text-xs uppercase text-paper/60">
                 {result.gameSpec.source.detectedObjectCount} objects ·{" "}
@@ -276,19 +288,33 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
                 gameId={result.gameId}
                 defaultTitle={result.gameSpec.title}
               />
+              {result.gameSpec.rules ? (
+                <div className="panel">
+                  <h2 className="marquee-title mb-2 text-lg text-token">
+                    {result.gameSpec.rules.headline}
+                  </h2>
+                  <p className="font-body text-sm text-paper/80">
+                    {result.gameSpec.rules.objective}
+                  </p>
+                </div>
+              ) : null}
               <div className="panel">
                 <h2 className="marquee-title mb-3 text-lg text-token">
                   What we found
                 </h2>
-                <ul className="space-y-1 font-mono text-xs text-paper/80">
+                <div className="flex flex-wrap gap-2">
                   {result.gameSpec.entities
                     .filter((entity) => entity.sourceLabel)
                     .map((entity) => (
-                      <li key={entity.id}>
-                        {entity.sourceLabel} → {entity.mechanic.replace(/_/g, " ")}
-                      </li>
+                      <span
+                        key={entity.id}
+                        className="rounded-full border-2 border-ink bg-cabinet px-3 py-1 font-mono text-[11px] text-paper/80"
+                      >
+                        {entity.sourceLabel} →{" "}
+                        {entity.mechanic.replace(/_/g, " ")}
+                      </span>
                     ))}
-                </ul>
+                </div>
                 {result.gameSpec.validation.repairActions.length > 0 ? (
                   <details className="mt-3 font-mono text-[11px] text-paper/60">
                     <summary className="cursor-pointer">
@@ -302,6 +328,37 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
                   </details>
                 ) : null}
               </div>
+              {result.gameSpec.magicPatterns?.editorUrl ? (
+                <div className="panel space-y-2">
+                  <h2 className="marquee-title text-lg text-token">
+                    Design kit
+                  </h2>
+                  <p className="font-mono text-xs text-paper/70">
+                    Magic Patterns generated a matching art direction for this
+                    level and tinted its palette.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <a
+                      href={result.gameSpec.magicPatterns.editorUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-secondary px-3 py-2 text-xs"
+                    >
+                      Open design in Magic Patterns editor ↗
+                    </a>
+                    {result.gameSpec.magicPatterns.previewUrl ? (
+                      <a
+                        href={result.gameSpec.magicPatterns.previewUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn-ghost px-3 py-2 text-xs"
+                      >
+                        Preview ↗
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
               <Link href="/arcade" className="btn-ghost w-full">
                 Browse the arcade
               </Link>
