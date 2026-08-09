@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { DifficultyBadge, ModeBadge } from "@/components/ui/Badge";
+import { ShareButton } from "@/components/ui/ShareButton";
 import { formatMs, formatPercent } from "@/components/ui/formatters";
 import { anonymousSessionId } from "@/lib/analytics/track";
 import type { GameSummary } from "@/lib/db/types";
@@ -91,6 +92,12 @@ export function ArcadeCabinet({ game }: { game: GameSummary }) {
         <Link href={`/game/${game.slug}`} className="btn-primary flex-1 py-2 text-sm">
           Play
         </Link>
+        <ShareButton
+          slug={game.slug}
+          className="btn-secondary px-3 py-2 text-sm"
+          label="Share"
+          copiedLabel="Copied!"
+        />
         <button
           type="button"
           className="btn-secondary px-3 py-2 text-sm"
