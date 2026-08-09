@@ -33,7 +33,7 @@ export function CustomCursor() {
   return (
     <div
       ref={dotRef}
-      className="pointer-events-none fixed left-0 top-0 z-[100] h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white opacity-0 transition-[opacity,scale] duration-150 ease-out"
+      className="pointer-events-none fixed left-0 top-0 z-[100] h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white opacity-0 mix-blend-difference transition-[opacity,scale] duration-150 ease-out"
       aria-hidden="true"
     />
   );

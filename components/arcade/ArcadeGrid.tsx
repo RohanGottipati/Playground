@@ -102,49 +102,37 @@ export function ArcadeGrid({ initialGames }: { initialGames: GameSummary[] }) {
 
   return (
     <div className="space-y-6">
-      <div
-        className="flex flex-wrap gap-2"
-        role="tablist"
-        aria-label="Sort games"
-      >
-        {SORTS.map((option) => {
-          const active = sort === option.id;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              className={`rounded-full border-2 px-4 py-1.5 font-mono text-[11px] uppercase tracking-wider transition ${
-                active
-                  ? "border-ink bg-token text-ink shadow-stickerSm"
-                  : "border-paper/25 text-paper/70 hover:border-paper/60 hover:text-paper"
-              }`}
-              onClick={() => {
-                setSort(option.id);
-                void load(option.id, 0);
-              }}
-            >
-              {option.label}
-            </button>
-          );
-        })}
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Sort games">
+        {SORTS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            role="tab"
+            aria-selected={sort === option.id}
+            className={`rounded-full px-4 py-2 font-body text-xs font-semibold transition ${
+              sort === option.id
+                ? "bg-appleInk text-white"
+                : "bg-appleBg text-appleInk hover:bg-appleBg/70"
+            }`}
+            onClick={() => {
+              setSort(option.id);
+              void load(option.id, 0);
+            }}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
 
-      {campaign ? (
-        <p className="font-body text-sm text-paper/55">
-          The campaign runs gentlest first — every level below is harder than
-          the last.
-        </p>
-      ) : null}
-
-      {games.length === 0 && !loading ? (
-        <div className="panel space-y-3 text-center">
-          <p className="font-body text-paper/80">
-            The arcade is empty. Be the first to turn a pile of objects into a
-            game.
+      {games.length === 0 ? (
+        <div className="space-y-3 rounded-2xl bg-appleBg p-5 text-center">
+          <p className="font-body text-appleGray">
+            The arcade is empty. Be the first to turn a pile of objects into a game.
           </p>
-          <Link href="/create" className="btn-primary">
+          <Link
+            href="/create"
+            className="inline-flex rounded-full bg-appleInk px-5 py-2.5 font-body text-sm font-semibold text-white transition hover:bg-black"
+          >
             Make the first game
           </Link>
         </div>
@@ -170,7 +158,7 @@ export function ArcadeGrid({ initialGames }: { initialGames: GameSummary[] }) {
         <div className="text-center">
           <button
             type="button"
-            className="btn-secondary"
+            className="rounded-full border border-appleGray/30 px-5 py-2.5 font-body text-sm font-semibold text-appleInk transition hover:border-appleGray/60 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loading}
             onClick={() => void load(sort, games.length)}
           >

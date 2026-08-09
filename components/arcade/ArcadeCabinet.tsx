@@ -3,28 +3,22 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { DifficultyBadge, ModeBadge } from "@/components/ui/Badge";
-import { modeMeta, tierFor } from "@/components/ui/difficulty";
 import { formatMs, formatPercent } from "@/components/ui/formatters";
 import { anonymousSessionId } from "@/lib/analytics/track";
 import type { GameSummary } from "@/lib/db/types";
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-paper/10 bg-ink/60 px-2 py-1.5">
-      <dt className="font-mono text-[9px] uppercase tracking-wider text-paper/45">
-        {label}
-      </dt>
-      <dd className="font-display text-sm text-paper/90">{value}</dd>
-    </div>
-  );
-}
+const MODE_LABELS: Record<string, string> = {
+  classic: "Platformer",
+  shooter: "Shooter",
+  skyfall: "Skyfall",
+  rush: "Rush",
+};
+
+const DIFFICULTY_LABELS = ["Gentle", "Easy", "Tricky", "Hard", "Brutal"];
 
 export function ArcadeCabinet({ game }: { game: GameSummary }) {
   const [likes, setLikes] = useState(game.likes);
   const [liking, setLiking] = useState(false);
-  const tier = tierFor(game.difficulty);
-  const mode = modeMeta(game.mode);
 
   async function like() {
     setLiking(true);
@@ -48,16 +42,14 @@ export function ArcadeCabinet({ game }: { game: GameSummary }) {
     }
   }
 
-  return (
-    <article
-      className={`group relative flex flex-col overflow-hidden rounded-2xl border-[3px] border-ink bg-cabinet shadow-sticker transition duration-200 hover:-translate-y-1 ${tier.glow}`}
-    >
-      {/* Cabinet marquee: mode-coloured light strip across the top. */}
-      <div className={`h-1.5 w-full bg-gradient-to-r ${mode.accent}`} />
+  const difficultyLabel =
+    DIFFICULTY_LABELS[Math.min(4, Math.max(0, game.difficulty - 1))];
 
+  return (
+    <article className="flex flex-col gap-3 rounded-2xl bg-appleBg p-4 transition hover:shadow-lg hover:shadow-black/5">
       <Link
         href={`/game/${game.slug}`}
-        className="relative block aspect-video overflow-hidden border-b-[3px] border-ink bg-black"
+        className="relative aspect-video overflow-hidden rounded-xl bg-black"
       >
         <Image
           src={game.sourceImageUrl}
@@ -65,65 +57,67 @@ export function ArcadeCabinet({ game }: { game: GameSummary }) {
           fill
           unoptimized
           sizes="(max-width: 768px) 100vw, 33vw"
-          className="object-cover transition duration-300 group-hover:scale-[1.04]"
+          className="object-cover"
         />
-        {/* CRT scanlines over the photo so cards read as arcade screens. */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-25 mix-blend-overlay"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(180deg, rgba(0,0,0,0.5) 0 1px, transparent 1px 3px)",
-          }}
-        />
-        <span className="absolute bottom-2 left-2 rounded bg-ink/85 px-2 py-1 font-mono text-[10px] uppercase text-screen">
+        <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-1 font-body text-[10px] font-medium text-white backdrop-blur-sm">
           {game.detectedObjectCount} objects
-        </span>
-        <span className="absolute right-2 top-2">
-          <ModeBadge mode={game.mode} />
         </span>
       </Link>
 
-      <div className="flex flex-1 flex-col gap-3 p-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <Link
-              href={`/game/${game.slug}`}
-              className="font-display text-base uppercase leading-tight text-paper transition hover:text-token"
-            >
-              {game.title}
-            </Link>
-            <p className="truncate font-mono text-[11px] uppercase text-paper/55">
-              by {game.creatorName}
-              {game.parentGameId ? " · remix" : ""}
-            </p>
-          </div>
-          <DifficultyBadge difficulty={game.difficulty} />
-        </div>
-
-        <dl className="grid grid-cols-3 gap-1.5">
-          <Stat label="Plays" value={String(game.plays)} />
-          <Stat label="Finish" value={formatPercent(game.completionRate)} />
-          <Stat label="Best" value={formatMs(game.fastestMs)} />
-        </dl>
-
-        <div className="mt-auto flex items-center gap-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
           <Link
             href={`/game/${game.slug}`}
-            className="btn-primary flex-1 py-2 text-sm"
+            className="truncate font-body text-base font-semibold text-appleInk hover:text-appleBlue"
           >
-            Play
+            {game.title}
           </Link>
-          <button
-            type="button"
-            className="btn-secondary px-3 py-2 text-sm"
-            aria-label={`Like ${game.title}`}
-            disabled={liking}
-            onClick={like}
-          >
-            ♥ {likes}
-          </button>
+          <p className="truncate font-body text-xs text-appleGray">
+            {game.creatorName}
+            {game.parentGameId ? " · remix" : ""}
+          </p>
         </div>
+        <div className="flex shrink-0 flex-col items-end gap-1 font-body text-[11px] font-medium text-appleGray">
+          <span>{difficultyLabel}</span>
+          <span>{MODE_LABELS[game.mode] ?? "Platformer"}</span>
+        </div>
+      </div>
+
+      <dl className="grid grid-cols-3 gap-2 font-body text-[11px] text-appleGray">
+        <div>
+          <dt className="text-appleGray/70">Plays</dt>
+          <dd className="font-semibold text-appleInk">{game.plays}</dd>
+        </div>
+        <div>
+          <dt className="text-appleGray/70">Finish</dt>
+          <dd className="font-semibold text-appleInk">
+            {formatPercent(game.completionRate)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-appleGray/70">Best</dt>
+          <dd className="font-semibold text-appleInk">
+            {formatMs(game.fastestMs)}
+          </dd>
+        </div>
+      </dl>
+
+      <div className="flex items-center justify-between gap-2">
+        <Link
+          href={`/game/${game.slug}`}
+          className="flex-1 rounded-full bg-appleInk py-2 text-center font-body text-sm font-semibold text-white transition hover:bg-black"
+        >
+          Play
+        </Link>
+        <button
+          type="button"
+          className="rounded-full border border-appleGray/30 px-3 py-2 font-body text-sm font-medium text-appleInk transition hover:border-appleGray/60 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label={`Like ${game.title}`}
+          disabled={liking}
+          onClick={like}
+        >
+          ♥ {likes}
+        </button>
       </div>
     </article>
   );
