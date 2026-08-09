@@ -125,6 +125,24 @@ describe("MemoryRepository", () => {
       payload: { x: 1500, y: 220, elapsedMs: 12000 },
     });
     await db.recordEvent({
+      gameId: selected.id,
+      sessionId: "session-c",
+      eventType: "game_completed",
+      payload: { elapsedMs: 8200, city: "Montreal" },
+    });
+    // Faster than any human run: excluded from the leaderboard.
+    await db.recordEvent({
+      gameId: selected.id,
+      sessionId: "session-d",
+      eventType: "game_completed",
+      payload: { elapsedMs: 40, city: "Halifax" },
+    });
+    await db.recordEvent({
+      gameId: other.id,
+      eventType: "game_completed",
+      payload: { elapsedMs: 3000, city: "Vancouver" },
+    });
+    await db.recordEvent({
       gameId: other.id,
       eventType: "player_died",
       payload: { x: 1, y: 2 },
@@ -133,17 +151,24 @@ describe("MemoryRepository", () => {
     const telemetry = await db.getTelemetrySnapshot(selected.id);
     expect(telemetry.gameId).toBe(selected.id);
     expect(telemetry.fatalityCount).toBe(1);
-    expect(telemetry.activeSessions).toBe(2);
+    expect(telemetry.activeSessions).toBe(4);
     expect(telemetry.deathPoints).toEqual([{ x: 120, y: 340 }]);
     expect(telemetry.recentEvents.map((event) => event.eventType)).toEqual([
       "game_completed",
+      "game_completed",
+      "game_completed",
       "player_died",
     ]);
-    expect(telemetry.recentEvents[1]).toMatchObject({
+    expect(telemetry.recentEvents[3]).toMatchObject({
       gameTitle: "Selected Game",
       city: "Ottawa",
       durationMs: 9000,
     });
+    // Fastest first, implausible runs dropped, other games excluded.
+    expect(telemetry.bestRuntimes).toEqual([
+      { city: "Montreal", durationMs: 8200 },
+      { city: null, durationMs: 12000 },
+    ]);
   });
 
   it("toggles likes per anonymous session", async () => {

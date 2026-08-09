@@ -17,6 +17,7 @@ import {
   ObjectsScannedCard,
 } from "./MetricCards";
 import { ObjectTopology } from "./ObjectTopology";
+import { RuntimeLeaderboard } from "./RuntimeLeaderboard";
 import type { DashboardEntity, DashboardWorld } from "./types";
 
 const POLL_MS = 2_500;
@@ -179,7 +180,13 @@ export function TechnationDashboard({
         />
       </div>
 
-      <LiveTicker events={telemetry?.recentEvents ?? []} />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <LiveTicker events={telemetry?.recentEvents ?? []} />
+        <RuntimeLeaderboard
+          entries={telemetry?.bestRuntimes ?? []}
+          gameTitle={selectedTitle}
+        />
+      </div>
 
       {selectedDetail ? (
         <DeathHeatmap

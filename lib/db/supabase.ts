@@ -10,7 +10,11 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeObjectLabel } from "@/lib/utils/sanitize";
 import { logDiagnostic } from "@/lib/utils/logger";
 import { sortSummaries } from "./memory";
-import { TELEMETRY_EVENT_TYPES } from "./types";
+import {
+  BEST_RUNTIME_LIMIT,
+  MIN_PLAUSIBLE_COMPLETION_MS,
+  TELEMETRY_EVENT_TYPES,
+} from "./types";
 import type {
   ArcadeSort,
   GameObjectRecord,
@@ -23,6 +27,7 @@ import type {
   PublishInput,
   RecordEventInput,
   Repository,
+  RuntimeLeaderboardEntry,
   SaveDraftInput,
   SessionUpdate,
   SpatialEventRecord,
@@ -140,6 +145,21 @@ function fail(operation: string, error: { message: string } | null): never {
   throw new AppError("DATABASE_ERROR", `${operation}: ${error?.message ?? "unknown"}`);
 }
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Postgres rejects a non-UUID comparison against a `uuid` column with error
+ * 22P02, which `fail()` would surface as a 500. Callers legitimately pass
+ * caller-supplied text here — `/api/games/[id]` and `/api/leaderboard/[gameId]`
+ * both accept an id *or* a slug and rely on the id lookup missing so the slug
+ * lookup can run — so an unparseable id is "no such row", matching
+ * MemoryRepository's plain map lookup.
+ */
+function isUuid(value: string): boolean {
+  return UUID_PATTERN.test(value);
+}
+
 export type ComponentCatalogRow = {
   id: string;
   name: string;
@@ -214,6 +234,7 @@ export class SupabaseRepository implements Repository {
   }
 
   async getGameById(id: string): Promise<GameRecord | undefined> {
+    if (!isUuid(id)) return undefined;
     const { data, error } = await this.client
       .from("games")
       .select("*")
@@ -265,6 +286,7 @@ export class SupabaseRepository implements Repository {
   }
 
   async unpublishGame(id: string): Promise<void> {
+    if (!isUuid(id)) throw new AppError("NOT_FOUND", "game not found");
     const { error } = await this.client
       .from("games")
       .update({ status: "draft", published_at: null })
@@ -344,6 +366,7 @@ export class SupabaseRepository implements Repository {
   }
 
   async getGameSummary(gameId: string): Promise<GameSummary | undefined> {
+    if (!isUuid(gameId)) return undefined;
     const { data, error } = await this.client
       .from("game_summaries")
       .select("*")
@@ -575,17 +598,32 @@ export class SupabaseRepository implements Repository {
       .eq("event_type", "player_died")
       .order("created_at", { ascending: false })
       .limit(20);
+    // Sorted in application code rather than via `.order()`, since PostgREST
+    // can't cast event_payload->>elapsedMs to numeric for ordering. 1000
+    // recent completions is comfortably more than any game will accumulate
+    // between the dashboard's polls.
+    const bestRuntimesQuery = client
+      .from("game_events")
+      .select("event_payload")
+      .eq("game_id", gameId)
+      .eq("event_type", "game_completed")
+      .order("created_at", { ascending: false })
+      .limit(1000);
 
-    const [counts, recentRows, deathPointRows] = await Promise.all([
+    const [counts, recentRows, deathPointRows, runtimeRows] = await Promise.all([
       countsQuery,
       recentQuery,
       deathPointsQuery,
+      bestRuntimesQuery,
     ]);
 
     if (counts.error) fail("getTelemetrySnapshot.counts", counts.error);
     if (recentRows.error) fail("getTelemetrySnapshot.recent", recentRows.error);
     if (deathPointRows.error) {
       fail("getTelemetrySnapshot.deathPoints", deathPointRows.error);
+    }
+    if (runtimeRows.error) {
+      fail("getTelemetrySnapshot.bestRuntimes", runtimeRows.error);
     }
 
     type CountRow = { fatality_count: number | string; active_sessions: number | string };
@@ -627,12 +665,31 @@ export class SupabaseRepository implements Repository {
       return typeof x === "number" && typeof y === "number" ? [{ x, y }] : [];
     });
 
+    const bestRuntimes = (
+      (runtimeRows.data ?? []) as { event_payload: Record<string, unknown> }[]
+    )
+      .flatMap((row): RuntimeLeaderboardEntry[] => {
+        const payload = row.event_payload ?? {};
+        const durationMs =
+          typeof payload.elapsedMs === "number" ? payload.elapsedMs : null;
+        if (durationMs == null || durationMs < MIN_PLAUSIBLE_COMPLETION_MS) return [];
+        return [
+          {
+            city: typeof payload.city === "string" ? payload.city : null,
+            durationMs,
+          },
+        ];
+      })
+      .sort((a, b) => a.durationMs - b.durationMs)
+      .slice(0, BEST_RUNTIME_LIMIT);
+
     return {
       gameId,
       fatalityCount: Number(countRow?.fatality_count ?? 0),
       activeSessions: Number(countRow?.active_sessions ?? 0),
       recentEvents,
       deathPoints,
+      bestRuntimes,
     };
   }
 

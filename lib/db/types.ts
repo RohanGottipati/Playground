@@ -207,6 +207,13 @@ export const ACTIVE_SESSION_EVENT_TYPES: GameEventType[] = [
   "game_completed",
 ];
 
+/**
+ * Client-reported timings are advisory, so a completion faster than this is
+ * treated as a clock glitch or a tampered payload: it never sets a session's
+ * duration and never reaches the best-runtimes leaderboard.
+ */
+export const MIN_PLAUSIBLE_COMPLETION_MS = 1500;
+
 export type SpatialEventRecord = {
   gameId: string;
   gameTitle: string;
@@ -218,6 +225,15 @@ export type SpatialEventRecord = {
   createdAt: string;
 };
 
+/** How many rows a game's best-runtimes leaderboard carries. */
+export const BEST_RUNTIME_LIMIT = 10;
+
+/** One row of a game's best-runtimes leaderboard, fastest first. */
+export type RuntimeLeaderboardEntry = {
+  city: string | null;
+  durationMs: number;
+};
+
 export type TelemetrySnapshot = {
   gameId: string;
   fatalityCount: number;
@@ -225,6 +241,8 @@ export type TelemetrySnapshot = {
   activeSessions: number;
   recentEvents: SpatialEventRecord[];
   deathPoints: { x: number; y: number }[];
+  /** Fastest plausible completions for this game, ascending by duration. */
+  bestRuntimes: RuntimeLeaderboardEntry[];
 };
 
 export type SessionUpdate = {

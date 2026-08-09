@@ -2,7 +2,12 @@ import { randomUUID } from "crypto";
 import { AppError } from "@/lib/errors/AppError";
 import { normalizeObjectLabel } from "@/lib/utils/sanitize";
 import { EMPTY_HINTS, type GenerationHints } from "@/game/generation/hints";
-import { ACTIVE_SESSION_EVENT_TYPES, TELEMETRY_EVENT_TYPES } from "./types";
+import {
+  ACTIVE_SESSION_EVENT_TYPES,
+  BEST_RUNTIME_LIMIT,
+  MIN_PLAUSIBLE_COMPLETION_MS,
+  TELEMETRY_EVENT_TYPES,
+} from "./types";
 import type { ComponentCatalogEntry } from "@/game/components/types";
 import type {
   ArcadeSort,
@@ -17,6 +22,7 @@ import type {
   PublishInput,
   RecordEventInput,
   Repository,
+  RuntimeLeaderboardEntry,
   SaveDraftInput,
   SessionUpdate,
   SpatialEventRecord,
@@ -401,12 +407,30 @@ export class MemoryRepository implements Repository {
         return typeof x === "number" && typeof y === "number" ? [{ x, y }] : [];
       });
 
+    const bestRuntimes = scopedEvents
+      .filter((event) => event.eventType === "game_completed")
+      .flatMap((event): RuntimeLeaderboardEntry[] => {
+        const payload = event.eventPayload;
+        const durationMs =
+          typeof payload.elapsedMs === "number" ? payload.elapsedMs : null;
+        if (durationMs == null || durationMs < MIN_PLAUSIBLE_COMPLETION_MS) return [];
+        return [
+          {
+            city: typeof payload.city === "string" ? payload.city : null,
+            durationMs,
+          },
+        ];
+      })
+      .sort((a, b) => a.durationMs - b.durationMs)
+      .slice(0, BEST_RUNTIME_LIMIT);
+
     return {
       gameId,
       fatalityCount,
       activeSessions: activeSessionIds.size,
       recentEvents,
       deathPoints,
+      bestRuntimes,
     };
   }
 
