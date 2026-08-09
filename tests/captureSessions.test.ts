@@ -22,13 +22,33 @@ import { POST as phoneUploadRoute } from "@/app/api/capture-sessions/[token]/upl
 const NOW = new Date("2026-08-09T12:00:00.000Z");
 
 describe("phone capture sessions", () => {
+  // The upload pipeline picks Supabase Storage vs. the in-process store based
+  // on these vars. Clearing them keeps this suite hermetic (and off real
+  // Supabase Storage) whether or not the environment it runs in — a
+  // developer's shell, CI, or a Vercel build with real project env vars —
+  // happens to have Supabase configured.
+  const supabaseEnvKeys = ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] as const;
+  let savedSupabaseEnv: Record<string, string | undefined> = {};
+
   beforeEach(() => {
+    savedSupabaseEnv = Object.fromEntries(
+      supabaseEnvKeys.map((key) => [key, process.env[key]]),
+    );
+    for (const key of supabaseEnvKeys) delete process.env[key];
+
     resetCaptureSessionStore();
     setCaptureSessionStoreForTests(new MemoryCaptureSessionStore());
     resetRateLimits();
   });
 
-  afterEach(() => resetCaptureSessionStore());
+  afterEach(() => {
+    resetCaptureSessionStore();
+    for (const key of supabaseEnvKeys) {
+      const value = savedSupabaseEnv[key];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
 
   it("stores hashes only and returns an upload to the laptop owner", async () => {
     const session = await createCaptureSession(NOW);
