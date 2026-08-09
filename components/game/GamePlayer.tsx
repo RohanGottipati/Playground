@@ -5,7 +5,8 @@ import { useCallback, useRef, useState } from "react";
 import type { ControlState, GameBus, HudState, RunResult } from "@/game/bus";
 import { fallbackRules } from "@/game/generation/rules";
 import type { GameSpec } from "@/game/types";
-import { startSession, track } from "@/lib/analytics/track";
+import { getUserObjectsScannedCount } from "@/lib/analytics/objectsScanned";
+import { recordSpatialEvent, startSession, track } from "@/lib/analytics/track";
 import type { Leaderboard } from "@/lib/db/types";
 import { GameHUD } from "./GameHUD";
 import { GameResults } from "./GameResults";
@@ -19,6 +20,7 @@ type Props = {
   sourceImageUrl?: string;
   shareUrl?: string;
   recordEvents?: boolean;
+  objectsScannedCount?: number;
   onRemix?: () => void;
 };
 
@@ -35,6 +37,7 @@ export function GamePlayer({
   sourceImageUrl,
   shareUrl,
   recordEvents = true,
+  objectsScannedCount = 0,
   onRemix,
 }: Props) {
   const [hud, setHud] = useState<HudState>(EMPTY_HUD);
@@ -88,9 +91,27 @@ export function GamePlayer({
             collectibles: hudRef.current.collectibles,
           },
         });
+
+        if (event.type === "player_died" || event.type === "game_completed") {
+          const x = event.payload?.x;
+          const y = event.payload?.y;
+          const elapsedMs = event.payload?.elapsedMs;
+          if (typeof x === "number" && typeof y === "number") {
+            void recordSpatialEvent({
+              eventType: event.type === "player_died" ? "death" : "clear",
+              gameId,
+              x,
+              y,
+              objectsScannedCount,
+              durationSeconds:
+                (typeof elapsedMs === "number" ? elapsedMs : hudRef.current.elapsedMs) / 1000,
+              userObjectsScannedCount: getUserObjectsScannedCount(),
+            });
+          }
+        }
       });
     },
-    [gameId, recordEvents],
+    [gameId, recordEvents, objectsScannedCount],
   );
 
   const restart = useCallback(() => {

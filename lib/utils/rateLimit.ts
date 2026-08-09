@@ -31,12 +31,16 @@ export const RATE_LIMITS = {
   publish: { limit: 10, windowMs: 60_000 },
   events: { limit: 240, windowMs: 60_000 },
   likes: { limit: 30, windowMs: 60_000 },
+  telemetryRead: { limit: 60, windowMs: 60_000 },
 } satisfies Record<string, RateLimitRule>;
 
-export function clientKey(request: Request, scope: string): string {
+export function extractClientIp(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for") ?? "";
-  const ip = forwarded.split(",")[0].trim() || "local";
-  return `${scope}:${ip}`;
+  return forwarded.split(",")[0].trim() || "local";
+}
+
+export function clientKey(request: Request, scope: string): string {
+  return `${scope}:${extractClientIp(request)}`;
 }
 
 /** Exposed for tests. */
