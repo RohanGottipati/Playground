@@ -16,7 +16,7 @@ const MODE_LABELS: Record<string, string> = {
 
 const DIFFICULTY_LABELS = ["Gentle", "Easy", "Tricky", "Hard", "Brutal"];
 
-export function ArcadeCabinet({ game }: { game: GameSummary }) {
+export function PlaygroundCabinet({ game }: { game: GameSummary }) {
   const [likes, setLikes] = useState(game.likes);
   const [liking, setLiking] = useState(false);
 
@@ -59,7 +59,10 @@ export function ArcadeCabinet({ game }: { game: GameSummary }) {
           sizes="(max-width: 768px) 100vw, 33vw"
           className="object-cover"
         />
-        <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-1 font-body text-[10px] font-medium text-white backdrop-blur-sm">
+        <span
+          className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-1 font-inter text-[10px] font-medium text-white backdrop-blur-sm"
+          style={{ letterSpacing: "-0.01em" }}
+        >
           {game.detectedObjectCount} objects
         </span>
       </Link>
@@ -68,35 +71,45 @@ export function ArcadeCabinet({ game }: { game: GameSummary }) {
         <div className="min-w-0">
           <Link
             href={`/game/${game.slug}`}
-            className="truncate font-body text-base font-semibold text-appleInk hover:text-appleBlue"
+            className="truncate font-inter font-medium text-appleInk hover:text-appleBlue"
+            style={{ fontSize: 15, letterSpacing: "-0.02em" }}
           >
             {game.title}
           </Link>
-          <p className="truncate font-body text-xs text-appleGray">
+          <p
+            className="truncate font-inter text-xs text-appleGray"
+            style={{ letterSpacing: "-0.01em" }}
+          >
             {game.creatorName}
             {game.parentGameId ? " · remix" : ""}
           </p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1 font-body text-[11px] font-medium text-appleGray">
+        <div
+          className="flex shrink-0 flex-col items-end gap-1 font-inter text-[11px] font-medium text-appleGray"
+          style={{ letterSpacing: "-0.01em" }}
+        >
           <span>{difficultyLabel}</span>
           <span>{MODE_LABELS[game.mode] ?? "Platformer"}</span>
         </div>
       </div>
 
-      <dl className="grid grid-cols-3 gap-2 font-body text-[11px] text-appleGray">
+      <dl
+        className="grid grid-cols-3 gap-2 font-inter text-[11px] text-appleGray"
+        style={{ letterSpacing: "-0.01em" }}
+      >
         <div>
           <dt className="text-appleGray/70">Plays</dt>
-          <dd className="font-semibold text-appleInk">{game.plays}</dd>
+          <dd className="font-medium text-appleInk">{game.plays}</dd>
         </div>
         <div>
           <dt className="text-appleGray/70">Finish</dt>
-          <dd className="font-semibold text-appleInk">
+          <dd className="font-medium text-appleInk">
             {formatPercent(game.completionRate)}
           </dd>
         </div>
         <div>
           <dt className="text-appleGray/70">Best</dt>
-          <dd className="font-semibold text-appleInk">
+          <dd className="font-medium text-appleInk">
             {formatMs(game.fastestMs)}
           </dd>
         </div>
@@ -105,13 +118,15 @@ export function ArcadeCabinet({ game }: { game: GameSummary }) {
       <div className="flex items-center justify-between gap-2">
         <Link
           href={`/game/${game.slug}`}
-          className="flex-1 rounded-full bg-appleInk py-2 text-center font-body text-sm font-semibold text-white transition hover:bg-black"
+          className="flex-1 rounded-full bg-appleInk py-2 text-center font-inter text-sm font-medium text-white transition hover:bg-black"
+          style={{ letterSpacing: "-0.02em" }}
         >
           Play
         </Link>
         <button
           type="button"
-          className="rounded-full border border-appleGray/30 px-3 py-2 font-body text-sm font-medium text-appleInk transition hover:border-appleGray/60 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full border border-appleGray/30 px-3 py-2 font-inter text-sm font-medium text-appleInk transition hover:border-appleGray/60 disabled:cursor-not-allowed disabled:opacity-60"
+          style={{ letterSpacing: "-0.02em" }}
           aria-label={`Like ${game.title}`}
           disabled={liking}
           onClick={like}

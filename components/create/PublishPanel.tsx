@@ -65,7 +65,7 @@ export function PublishPanel({ gameId, defaultTitle }: Props) {
       <div className="panel space-y-4">
         <h2 className="marquee-title text-xl text-screen">Published</h2>
         <p className="font-mono text-sm text-paper/80">
-          Your game is live in the arcade at{" "}
+          Your game is live in the Playground at{" "}
           <span className="text-token">/game/{published.slug}</span>
         </p>
         {published.discoveries.length > 0 ? (
@@ -84,8 +84,8 @@ export function PublishPanel({ gameId, defaultTitle }: Props) {
           <button type="button" className="btn-secondary" onClick={copyLink}>
             {copied ? "Link copied" : "Copy link"}
           </button>
-          <Link href="/arcade" className="btn-ghost">
-            Go to arcade
+          <Link href="/playground" className="btn-ghost">
+            Go to Playground
           </Link>
         </div>
       </div>
@@ -94,7 +94,7 @@ export function PublishPanel({ gameId, defaultTitle }: Props) {
 
   return (
     <div className="panel space-y-4">
-      <h2 className="marquee-title text-xl text-token">Publish to the arcade</h2>
+      <h2 className="marquee-title text-xl text-token">Publish to the Playground</h2>
       <label className="block font-mono text-xs uppercase text-paper/70">
         Game title
         <input

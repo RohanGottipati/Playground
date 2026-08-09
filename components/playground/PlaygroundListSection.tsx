@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { GameSummary } from "@/lib/db/types";
 
-export function ArcadeListSection({
+export function PlaygroundListSection({
   title,
   subtitle,
   games,
@@ -18,11 +18,17 @@ export function ArcadeListSection({
   return (
     <section className="space-y-4">
       <div className="flex items-baseline justify-between">
-        <h2 className="font-body text-xl font-bold text-appleInk">{title}</h2>
+        <h2
+          className="font-inter font-medium text-appleInk"
+          style={{ fontSize: 20, letterSpacing: "-0.03em" }}
+        >
+          {title}
+        </h2>
         {seeAllHref ? (
           <Link
             href={seeAllHref}
-            className="font-body text-sm font-medium text-appleBlue hover:underline"
+            className="font-inter text-sm font-medium text-appleBlue hover:underline"
+            style={{ letterSpacing: "-0.01em" }}
           >
             See All
           </Link>
@@ -46,14 +52,23 @@ export function ArcadeListSection({
               />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-body text-sm font-semibold text-appleInk">
+              <p
+                className="truncate font-inter font-medium text-appleInk"
+                style={{ fontSize: 14, letterSpacing: "-0.02em" }}
+              >
                 {game.title}
               </p>
-              <p className="truncate font-body text-xs text-appleGray">
+              <p
+                className="truncate font-inter text-xs text-appleGray"
+                style={{ letterSpacing: "-0.01em" }}
+              >
                 {subtitle(game)}
               </p>
             </div>
-            <span className="shrink-0 rounded-full border border-appleBlue/30 px-3 py-1 font-body text-xs font-semibold text-appleBlue transition group-hover:bg-appleBlue group-hover:text-white">
+            <span
+              className="shrink-0 rounded-full border border-appleBlue/30 px-3 py-1 font-inter text-xs font-medium text-appleBlue transition group-hover:bg-appleBlue group-hover:text-white"
+              style={{ letterSpacing: "-0.01em" }}
+            >
               Play
             </span>
           </Link>

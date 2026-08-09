@@ -5,15 +5,33 @@ import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 
 const ITEMS = [
-  { href: "/", label: "Playground", serif: true },
-  { href: "/arcade", label: "Arcade" },
+  { href: "/", label: "Home", isHome: true },
+  { href: "/playground", label: "Playground" },
   { href: "/stats", label: "Stats" },
   { href: "/create", label: "Make a game" },
 ];
 
 // Routes that render a light/white background instead of the dark video bg,
 // so the pill needs an inverted, dark-on-light color scheme to stay legible.
-const LIGHT_BG_ROUTES = ["/", "/arcade"];
+const LIGHT_BG_ROUTES = ["/", "/playground"];
+
+function HomeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M3 11.5 12 4l9 7.5" />
+      <path d="M5.5 10v9.5a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1V16a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3.5a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1V10" />
+    </svg>
+  );
+}
 
 export function NavPill() {
   const pathname = usePathname();
@@ -71,17 +89,18 @@ export function NavPill() {
           <Link
             key={item.href}
             href={item.href}
+            aria-label={item.isHome ? "Home" : undefined}
             ref={(node) => {
               itemRefs.current[index] = node;
             }}
             onMouseEnter={() => handleEnter(index)}
-            className={`relative z-10 rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-150 ${
-              item.serif ? "font-serif" : "font-body"
+            className={`relative z-10 rounded-xl font-body font-medium transition-colors duration-150 ${
+              item.isHome ? "p-2" : "px-4 py-2 text-sm"
             } ${textColor} ${
               isStaticWhite ? (isLightBg ? "bg-ink" : "bg-white") : "bg-transparent"
             }`}
           >
-            {item.label}
+            {item.isHome ? <HomeIcon className="h-4 w-4" /> : item.label}
           </Link>
         );
       })}

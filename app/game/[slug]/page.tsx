@@ -135,8 +135,8 @@ export default async function GamePage({ params }: Props) {
           <div className="flex items-center gap-2">
             <ModeBadge mode={spec.mode ?? "classic"} />
             <DifficultyBadge difficulty={game.difficulty} size="lg" />
-            <Link href="/arcade" className="btn-ghost px-3 py-2 text-xs">
-              Back to arcade
+            <Link href="/playground" className="btn-ghost px-3 py-2 text-xs">
+              Back to Playground
             </Link>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import type { GameSummary } from "@/lib/db/types";
 
-export function ArcadeHero({ games }: { games: GameSummary[] }) {
+export function PlaygroundHero({ games }: { games: GameSummary[] }) {
   if (games.length === 0) return null;
 
   return (

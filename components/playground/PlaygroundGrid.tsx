@@ -5,7 +5,7 @@ import Link from "next/link";
 import { tierFor } from "@/components/ui/difficulty";
 import type { ArcadeSort, GameSummary } from "@/lib/db/types";
 import { supabaseBrowser } from "@/lib/supabase/browser";
-import { ArcadeCabinet } from "./ArcadeCabinet";
+import { PlaygroundCabinet } from "./PlaygroundCabinet";
 
 const SORTS: { id: ArcadeSort; label: string }[] = [
   { id: "campaign", label: "Campaign" },
@@ -37,14 +37,20 @@ function TierDivider({ difficulty }: { difficulty: number }) {
   return (
     <div className="col-span-full flex items-center gap-4 pt-2">
       <div className="flex items-baseline gap-3">
-        <span className={`font-display text-xl uppercase ${tier.text}`}>
+        <span
+          className={`font-inter font-medium uppercase ${tier.text}`}
+          style={{ fontSize: 20, letterSpacing: "-0.03em" }}
+        >
           {tier.sectionTitle}
         </span>
         <span className="font-mono text-[11px] uppercase tracking-wider text-paper/45">
           {"★".repeat(tier.level)}
         </span>
       </div>
-      <p className="hidden font-body text-xs text-paper/50 sm:block">
+      <p
+        className="hidden font-inter text-xs text-paper/50 sm:block"
+        style={{ letterSpacing: "-0.01em" }}
+      >
         {tier.blurb}
       </p>
       <div
@@ -54,7 +60,7 @@ function TierDivider({ difficulty }: { difficulty: number }) {
   );
 }
 
-export function ArcadeGrid({ initialGames }: { initialGames: GameSummary[] }) {
+export function PlaygroundGrid({ initialGames }: { initialGames: GameSummary[] }) {
   const [sort, setSort] = useState<ArcadeSort>("campaign");
   const [games, setGames] = useState<GameSummary[]>(initialGames);
   const [loading, setLoading] = useState(false);
@@ -74,7 +80,7 @@ export function ArcadeGrid({ initialGames }: { initialGames: GameSummary[] }) {
         );
         setHasMore(body.games.length === PAGE_SIZE);
       } catch (error) {
-        console.warn("arcade fetch failed", error);
+        console.warn("playground fetch failed", error);
       } finally {
         setLoading(false);
       }
@@ -86,7 +92,7 @@ export function ArcadeGrid({ initialGames }: { initialGames: GameSummary[] }) {
     const client = supabaseBrowser();
     if (!client) return;
     const channel = client
-      .channel("arcade-games")
+      .channel("playground-games")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "games" },
@@ -109,11 +115,12 @@ export function ArcadeGrid({ initialGames }: { initialGames: GameSummary[] }) {
             type="button"
             role="tab"
             aria-selected={sort === option.id}
-            className={`rounded-full px-4 py-2 font-body text-xs font-semibold transition ${
+            className={`rounded-full px-4 py-2 font-inter text-xs font-medium transition ${
               sort === option.id
                 ? "bg-appleInk text-white"
                 : "bg-appleBg text-appleInk hover:bg-appleBg/70"
             }`}
+            style={{ letterSpacing: "-0.01em" }}
             onClick={() => {
               setSort(option.id);
               void load(option.id, 0);
@@ -126,12 +133,13 @@ export function ArcadeGrid({ initialGames }: { initialGames: GameSummary[] }) {
 
       {games.length === 0 ? (
         <div className="space-y-3 rounded-2xl bg-appleBg p-5 text-center">
-          <p className="font-body text-appleGray">
-            The arcade is empty. Be the first to turn a pile of objects into a game.
+          <p className="font-inter text-appleGray" style={{ letterSpacing: "-0.01em" }}>
+            The playground is empty. Be the first to turn a pile of objects into a game.
           </p>
           <Link
             href="/create"
-            className="inline-flex rounded-full bg-appleInk px-5 py-2.5 font-body text-sm font-semibold text-white transition hover:bg-black"
+            className="inline-flex rounded-full bg-appleInk px-5 py-2.5 font-inter text-sm font-medium text-white transition hover:bg-black"
+            style={{ letterSpacing: "-0.02em" }}
           >
             Make the first game
           </Link>
@@ -143,7 +151,7 @@ export function ArcadeGrid({ initialGames }: { initialGames: GameSummary[] }) {
               {campaign && game.difficulty !== games[index - 1]?.difficulty ? (
                 <TierDivider difficulty={game.difficulty} />
               ) : null}
-              <ArcadeCabinet game={game} />
+              <PlaygroundCabinet game={game} />
             </div>
           ))}
           {loading && games.length === 0
@@ -158,7 +166,8 @@ export function ArcadeGrid({ initialGames }: { initialGames: GameSummary[] }) {
         <div className="text-center">
           <button
             type="button"
-            className="rounded-full border border-appleGray/30 px-5 py-2.5 font-body text-sm font-semibold text-appleInk transition hover:border-appleGray/60 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full border border-appleGray/30 px-5 py-2.5 font-inter text-sm font-medium text-appleInk transition hover:border-appleGray/60 disabled:cursor-not-allowed disabled:opacity-60"
+            style={{ letterSpacing: "-0.02em" }}
             disabled={loading}
             onClick={() => void load(sort, games.length)}
           >

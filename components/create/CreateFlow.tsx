@@ -359,8 +359,8 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
                   </div>
                 </div>
               ) : null}
-              <Link href="/arcade" className="btn-ghost w-full">
-                Browse the arcade
+              <Link href="/playground" className="btn-ghost w-full">
+                Browse the Playground
               </Link>
             </div>
           </div>

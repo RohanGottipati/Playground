@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Playground",
     description:
-      "Turn a photo of real objects into a playable platformer, then publish it to a shared arcade.",
+      "Turn a photo of real objects into a playable platformer, then publish it to a shared playground.",
     type: "website",
   },
 };

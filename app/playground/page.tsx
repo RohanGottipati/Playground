@@ -1,21 +1,21 @@
 import type { Metadata } from "next";
-import { ArcadeGrid } from "@/components/arcade/ArcadeGrid";
-import { ArcadeHero } from "@/components/arcade/ArcadeHero";
-import { ArcadeListSection } from "@/components/arcade/ArcadeListSection";
-import { ArcadeShelf } from "@/components/arcade/ArcadeShelf";
+import { PlaygroundGrid } from "@/components/playground/PlaygroundGrid";
+import { PlaygroundHero } from "@/components/playground/PlaygroundHero";
+import { PlaygroundListSection } from "@/components/playground/PlaygroundListSection";
+import { PlaygroundShelf } from "@/components/playground/PlaygroundShelf";
 import { formatMs } from "@/components/ui/formatters";
 import { repository } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Arcade — Playground",
+  title: "Playground",
   description: "Play platformers generated from photos of real objects.",
 };
 
 const DIFFICULTY_LABELS = ["Gentle", "Easy", "Tricky", "Hard", "Brutal"];
 
-export default async function ArcadePage() {
+export default async function PlaygroundPage() {
   const repo = repository();
   const [trending, newest, mostRemixed, fastest, hardest] = await Promise.all([
     repo.listGames({ sort: "trending", limit: 3, offset: 0 }),
@@ -30,38 +30,43 @@ export default async function ArcadePage() {
       <div className="fixed inset-0 -z-10 bg-white" />
       <div className="space-y-10">
         <header className="space-y-1">
-          <p className="font-body text-sm font-semibold uppercase tracking-wide text-appleGray">
-            Arcade
+          <p className="font-inter text-sm font-medium uppercase tracking-wide text-appleGray">
+            Playground
           </p>
-          <h1 className="font-body text-3xl font-bold text-appleInk">Play</h1>
-          <p className="font-body text-sm text-appleGray">
+          <h1
+            className="font-inter font-medium text-appleInk"
+            style={{ fontSize: 30, letterSpacing: "-0.04em" }}
+          >
+            Play
+          </h1>
+          <p className="font-inter text-sm text-appleGray" style={{ letterSpacing: "-0.01em" }}>
             Every game here started as a photo of real objects.
           </p>
         </header>
 
-        <ArcadeHero games={trending} />
+        <PlaygroundHero games={trending} />
 
-        <ArcadeShelf
+        <PlaygroundShelf
           title="New Arrivals"
           eyebrow="New Game"
           subtitle={(game) => `${game.creatorName} · ${game.detectedObjectCount} objects`}
           games={newest}
         />
 
-        <ArcadeListSection
+        <PlaygroundListSection
           title="Most Loved"
           subtitle={(game) => `${game.remixes} remixes · ${game.likes} likes`}
           games={mostRemixed}
         />
 
-        <ArcadeShelf
+        <PlaygroundShelf
           title="Built For Speed"
           eyebrow="Fastest Clear"
           subtitle={(game) => `Best: ${formatMs(game.fastestMs)}`}
           games={fastest}
         />
 
-        <ArcadeListSection
+        <PlaygroundListSection
           title="Hardest Challenges"
           subtitle={(game) =>
             DIFFICULTY_LABELS[Math.min(4, Math.max(0, game.difficulty - 1))]
@@ -70,10 +75,13 @@ export default async function ArcadePage() {
         />
 
         <section className="space-y-4">
-          <h2 className="font-body text-xl font-bold text-appleInk">
+          <h2
+            className="font-inter font-medium text-appleInk"
+            style={{ fontSize: 20, letterSpacing: "-0.03em" }}
+          >
             Browse All Games
           </h2>
-          <ArcadeGrid initialGames={newest} />
+          <PlaygroundGrid initialGames={newest} />
         </section>
       </div>
     </>

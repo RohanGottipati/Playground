@@ -282,7 +282,7 @@ async function main() {
 
     const httpPaths = new Set<string>([
       "/",
-      "/arcade",
+      "/playground",
       "/create",
       "/stats",
       ...campaign.map((game) => `/game/${game.slug}`),

@@ -37,7 +37,7 @@ export function ModeBadge({ mode }: { mode: string }) {
 
 /**
  * A five-notch meter rather than a word: the filled bars make the campaign's
- * ramp legible at a glance while scrolling the arcade.
+ * ramp legible at a glance while scrolling the Playground.
  */
 export function DifficultyBadge({
   difficulty,

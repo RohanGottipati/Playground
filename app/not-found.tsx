@@ -8,8 +8,8 @@ export default function NotFound() {
         This game may have been unpublished, or the link is wrong.
       </p>
       <div className="flex flex-wrap justify-center gap-3">
-        <Link href="/arcade" className="btn-primary">
-          Browse the arcade
+        <Link href="/playground" className="btn-primary">
+          Browse the Playground
         </Link>
         <Link href="/create" className="btn-secondary">
           Make your own

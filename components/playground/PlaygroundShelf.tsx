@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { GameSummary } from "@/lib/db/types";
 
-export function ArcadeShelf({
+export function PlaygroundShelf({
   title,
   eyebrow,
   subtitle,
@@ -20,11 +20,17 @@ export function ArcadeShelf({
   return (
     <section className="space-y-4">
       <div className="flex items-baseline justify-between">
-        <h2 className="font-body text-xl font-bold text-appleInk">{title}</h2>
+        <h2
+          className="font-inter font-medium text-appleInk"
+          style={{ fontSize: 20, letterSpacing: "-0.03em" }}
+        >
+          {title}
+        </h2>
         {seeAllHref ? (
           <Link
             href={seeAllHref}
-            className="font-body text-sm font-medium text-appleBlue hover:underline"
+            className="font-inter text-sm font-medium text-appleBlue hover:underline"
+            style={{ letterSpacing: "-0.01em" }}
           >
             See All
           </Link>
@@ -48,13 +54,19 @@ export function ArcadeShelf({
               />
             </div>
             <div className="mt-2 space-y-0.5">
-              <p className="font-body text-[11px] font-semibold uppercase tracking-wide text-appleGray">
+              <p className="font-inter text-[11px] font-medium uppercase tracking-wide text-appleGray">
                 {typeof eyebrow === "function" ? eyebrow(game) : eyebrow}
               </p>
-              <p className="truncate font-body text-sm font-semibold text-appleInk">
+              <p
+                className="truncate font-inter font-medium text-appleInk"
+                style={{ fontSize: 14, letterSpacing: "-0.02em" }}
+              >
                 {game.title}
               </p>
-              <p className="truncate font-body text-xs text-appleGray">
+              <p
+                className="truncate font-inter text-xs text-appleGray"
+                style={{ letterSpacing: "-0.01em" }}
+              >
                 {subtitle(game)}
               </p>
             </div>
