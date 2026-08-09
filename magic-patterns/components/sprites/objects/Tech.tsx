@@ -208,3 +208,57 @@ export function VacuumObject({ size, className, animated, label = 'Vacuum cleane
     </SpriteFrame>);
 
 }
+
+/** Earbud charging case, lid closed — small container / block. */
+export function AirpodsCaseObject({ size, className, animated, label = 'Earbud case' }: SpriteProps) {
+  return (
+    <SpriteFrame size={size} className={className} animated={animated} motionStyle="bob" label={label}>
+      <path d="M14 30h36v18a10 10 0 01-10 10H24a10 10 0 01-10-10z" fill="#f8fafc" {...S} />
+      <path d="M14 30a18 12 0 0136 0z" fill="#e2e8f0" {...S} />
+      <path d="M14 30h36" {...S} strokeWidth="1.5" />
+      <circle cx="32" cy="50" r="3" fill="#4ade80" {...S} strokeWidth="1.5" />
+      <path d="M24 22v6M40 22v6" stroke="#cbd5e1" strokeWidth="3" />
+    </SpriteFrame>);
+
+}
+
+/** Earbud charging case, lid open — the firing machine. */
+export function AirpodsCaseOpenObject({ size, className, animated, label = 'Earbud case open' }: SpriteProps) {
+  return (
+    <SpriteFrame size={size} className={className} animated={animated} motionStyle="pulse" label={label}>
+      <path d="M14 34h36v14a10 10 0 01-10 10H24a10 10 0 01-10-10z" fill="#f8fafc" {...S} />
+      <path d="M16 12h32a4 4 0 014 4v10H12V16a4 4 0 014-4z" fill="#e2e8f0" {...S} />
+      <path d="M12 26h40v6H12z" fill="#f8fafc" {...S} strokeWidth="1.5" />
+      <path d="M26 34v-8a3 3 0 016 0v8M34 34v-8a3 3 0 016 0v8" fill="#f8fafc" {...S} strokeWidth="1.5" />
+      <circle cx="32" cy="50" r="3" fill="#4ade80" {...S} strokeWidth="1.5" />
+    </SpriteFrame>);
+
+}
+
+/** Wireless earbud pair — small collectible / projectile. */
+export function AirpodsObject({ size, className, animated, label = 'Earbuds' }: SpriteProps) {
+  return (
+    <SpriteFrame size={size} className={className} animated={animated} motionStyle="bob" label={label}>
+      <path d="M16 10a9 9 0 019 9c0 4-3 6-3 9v20a5 5 0 01-10 0V28c0-3-3-5-3-9a9 9 0 017-9z" fill="#f8fafc" {...S} />
+      <path d="M48 10a9 9 0 00-9 9c0 4 3 6 3 9v20a5 5 0 0010 0V28c0-3 3-5 3-9a9 9 0 00-7-9z" fill="#f8fafc" {...S} />
+      <circle cx="18" cy="18" r="3" fill="#cbd5e1" />
+      <circle cx="46" cy="18" r="3" fill="#cbd5e1" />
+      <path d="M15 34h6M43 34h6" stroke="#cbd5e1" strokeWidth="2" />
+    </SpriteFrame>);
+
+}
+
+/** Phone lying face-up — launches the player skyward like a bounce pad. */
+export function PhoneBouncePadObject({ size, className, animated, label = 'Phone bounce pad' }: SpriteProps) {
+  return (
+    <SpriteFrame size={size} className={className} animated={animated} motionStyle="pulse" label={label}>
+      <path d="M22 12l10-10 10 10M22 26l10-10 10 10" fill="none" stroke="#22c55e" strokeWidth="3" />
+      <rect x="4" y="34" width="56" height="24" rx="8" fill="#1f2937" {...S} />
+      <path d="M8 46c8-10 44-10 48 0v6a4 4 0 01-4 4H12a4 4 0 01-4-4z" fill="#0f172a" />
+      <path d="M8 46c8-10 44-10 48 0" fill="#38bdf8" {...S} strokeWidth="1.5" />
+      <path d="M14 44c8-5 28-5 36 0" stroke="#bae6fd" strokeWidth="2" fill="none" />
+      <circle cx="32" cy="54" r="2.5" fill="#475569" />
+      <path d="M6 60h52" stroke={INK} strokeWidth="2" opacity="0.3" />
+    </SpriteFrame>);
+
+}

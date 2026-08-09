@@ -38,11 +38,11 @@ describe("component catalog", () => {
   it("registers every supplied core and everyday-object component", () => {
     expect(COMPONENT_CATALOG_COUNTS).toEqual({
       core: 138,
-      objects: 211,
-      total: 349,
+      objects: 216,
+      total: 354,
     });
-    expect(COMPONENT_CATALOG).toHaveLength(349);
-    expect(new Set(COMPONENT_CATALOG.map((entry) => entry.id)).size).toBe(349);
+    expect(COMPONENT_CATALOG).toHaveLength(354);
+    expect(new Set(COMPONENT_CATALOG.map((entry) => entry.id)).size).toBe(354);
   });
 
   it("contains all supplied component categories", () => {
@@ -74,8 +74,8 @@ describe("component catalog", () => {
       .filter((entry) => entry.metadata.componentType === "object-sprite")
       .map((entry) => entry.id)
       .sort();
-    expect(MAGIC_PATTERN_COMPONENT_IDS).toHaveLength(211);
-    expect(new Set(MAGIC_PATTERN_COMPONENT_IDS).size).toBe(211);
+    expect(MAGIC_PATTERN_COMPONENT_IDS).toHaveLength(216);
+    expect(new Set(MAGIC_PATTERN_COMPONENT_IDS).size).toBe(216);
     expect([...MAGIC_PATTERN_COMPONENT_IDS].sort()).toEqual(databaseObjectIds);
   });
 

@@ -149,9 +149,13 @@ function sitsOnShelter(pickup: GameEntitySpec, shelter: Rect): boolean {
  *
  * Deterministic: the same seed always produces the same layout, so a published
  * game replays exactly as it was previewed.
+ *
+ * Only skyfall levels are re-rolled. Other modes may carry a storm as ambient
+ * pressure rather than as the puzzle, and their platforms are load-bearing for
+ * a hand-tuned route — sliding those would break the level, not vary it.
  */
 export function randomizeShelters(spec: GameSpec, seed: number): GameSpec {
-  if (!spec.skyfall) return spec;
+  if (!spec.skyfall || spec.mode !== "skyfall") return spec;
 
   const shelters = spec.entities.filter(isShelter);
   if (shelters.length === 0) return spec;

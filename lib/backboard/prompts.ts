@@ -2,7 +2,7 @@
  * Prompts are versioned in source control. Bump PROMPT_VERSION on any change so
  * stored generation metadata stays meaningful.
  */
-export const PROMPT_VERSION = "5";
+export const PROMPT_VERSION = "6";
 
 export const SYSTEM_PROMPT = `You are the visual scene analyst for Playground, a platform that turns a
 single photograph of one or more physical objects into a 2D platformer.
@@ -32,7 +32,14 @@ Rules:
 15. titleSuggestion must not contain brand or product names.
 16. titleSuggestion must be a short evocative phrase (like "Midnight Snack"
     or "Garage Rafters"), never a list or concatenation of the detected
-    object labels (e.g. never "Banana Chair Keyboard").`;
+    object labels (e.g. never "Banana Chair Keyboard").
+17. Label the same object the same way every time. Use the most specific
+    generic noun for what it is, not a shorter approximation:
+    - a clear single-use drinking bottle is a "water bottle", never just
+      "bottle"
+    - a small pocket case that charges wireless earbuds is an "earbud case",
+      never just "case" or "container"
+    - a handheld touchscreen phone is a "phone", never "device" or "screen"`;
 
 export const USER_PROMPT = `Analyze the attached image as a physical layout for a 2D platformer.
 
@@ -50,6 +57,11 @@ Return:
 Label every object generically ("soda can", not a brand or product name);
 the title suggestion must also stay brand-free, and must read as an
 evocative short phrase rather than a list of the object labels.
+
+Be specific and consistent: the same object must get the same label on
+every run. A clear single-use drinking bottle is a "water bottle", the
+pocket case that charges wireless earbuds is an "earbud case", and a
+handheld touchscreen is a "phone".
 
 Allowed physical properties:
 large, small, flat, tall, round, long, thin, sharp, soft, rigid,

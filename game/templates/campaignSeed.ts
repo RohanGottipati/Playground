@@ -5,8 +5,9 @@ import { slugifyTitle } from "@/lib/utils/slug";
 import { CREATOR_BY_TEMPLATE } from "./creators";
 import {
   buildTemplateSpec,
-  TEMPLATE_IDS,
+  CAMPAIGN_TEMPLATE_IDS,
   TEMPLATES,
+  type CampaignTemplateId,
   type TemplateId,
 } from "./index";
 
@@ -17,7 +18,7 @@ export type ExistingCampaignIdentity = {
 };
 
 export type CampaignSeedGame = {
-  template: TemplateId;
+  template: CampaignTemplateId;
   id: string;
   slug: string;
   title: string;
@@ -69,7 +70,7 @@ export function buildCampaignSeedGames(options: {
   const reserved = new Set(options.reservedSlugs ?? []);
   const publishedAtStart = options.publishedAtStart ?? new Date();
 
-  return TEMPLATE_IDS.map((template, index) => {
+  return CAMPAIGN_TEMPLATE_IDS.map((template, index) => {
     const definition = TEMPLATES[template];
     const id = campaignGameId(template);
     const imageUrl = `/template-previews/${template}.svg`;

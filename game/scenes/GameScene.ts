@@ -129,6 +129,16 @@ export class GameScene extends Phaser.Scene {
     super("GameScene");
   }
 
+  /**
+   * Whether cover slides and vanishes mid-run. Only skyfall levels get that:
+   * there the storm is the puzzle and a memorized safe square would solve it.
+   * Other modes may carry a storm as ambient pressure while their platforms
+   * hold a hand-tuned route, which must stay exactly where it was authored.
+   */
+  private get restlessShelters(): boolean {
+    return Boolean(this.spec.skyfall) && this.spec.mode === "skyfall";
+  }
+
   create() {
     this.spec = this.registry.get("spec") as GameSpec;
     this.bus = this.registry.get("bus") as GameBus;
@@ -179,7 +189,7 @@ export class GameScene extends Phaser.Scene {
         case "static_platform": {
           const platform = createStaticPlatform(this, entity, this.palette);
           solids.push(platform);
-          if (this.spec.skyfall && isShelter(entity)) {
+          if (this.restlessShelters && isShelter(entity)) {
             shelterById.set(entity.id, platform);
           }
           break;
@@ -216,7 +226,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    if (this.spec.skyfall && shelterById.size > 0) {
+    if (this.restlessShelters && shelterById.size > 0) {
       const shelterEntities = this.spec.entities.filter(isShelter);
       this.shelterRows = rowsByTop(shelterEntities)
         .map((row) =>

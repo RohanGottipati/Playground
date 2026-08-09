@@ -27,8 +27,8 @@ async function loadLocalEnv() {
 }
 
 function assertCatalog() {
-  if (componentCatalogCounts.total !== 349) {
-    throw new Error(`Expected 349 catalog entries, found ${componentCatalogCounts.total}`);
+  if (componentCatalogCounts.total !== 354) {
+    throw new Error(`Expected 354 catalog entries, found ${componentCatalogCounts.total}`);
   }
   const ids = new Set();
   for (const entry of componentCatalogData) {
@@ -39,7 +39,7 @@ function assertCatalog() {
     (entry) => entry.metadata.componentType === "object-sprite",
   );
   if (
-    objectEntries.length !== 211 ||
+    objectEntries.length !== 216 ||
     objectEntries.some(
       (entry) =>
         entry.runtimeScope !== "entity" ||

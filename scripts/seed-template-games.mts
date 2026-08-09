@@ -6,7 +6,7 @@ import {
   campaignGameId,
   type ExistingCampaignIdentity,
 } from "../game/templates/campaignSeed";
-import { TEMPLATE_IDS } from "../game/templates";
+import { CAMPAIGN_TEMPLATE_IDS } from "../game/templates";
 
 type ExistingRow = {
   id: string;
@@ -79,7 +79,7 @@ async function main() {
   const client = createClient(url, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const ids = TEMPLATE_IDS.map(campaignGameId);
+  const ids = CAMPAIGN_TEMPLATE_IDS.map(campaignGameId);
   const [{ data: existingData, error: existingError }, { data: slugData, error: slugError }] =
     await Promise.all([
       client.from("games").select("id,slug,published_at").in("id", ids),

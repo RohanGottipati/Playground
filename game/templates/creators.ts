@@ -1,11 +1,12 @@
-import type { TemplateId } from "./index";
+import type { CampaignTemplateId } from "./index";
 
 /**
  * The players credited with each seeded arcade game. Every campaign level is
  * presented as someone's photo of their own home, so the arcade reads like a
- * community rather than a single first-party account.
+ * community rather than a single first-party account. Object-signature
+ * recipes are never seeded, so they have no creator here.
  */
-export const CREATOR_BY_TEMPLATE: Record<TemplateId, string> = {
+export const CREATOR_BY_TEMPLATE: Record<CampaignTemplateId, string> = {
   pantry: "snackgoblin",
   sockdrawer: "mira.folds",
   bathtime: "duck_dynasty",

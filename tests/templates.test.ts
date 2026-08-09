@@ -8,6 +8,7 @@ import {
 } from "@/game/generation/validateReachability";
 import {
   buildTemplateSpec,
+  CAMPAIGN_TEMPLATE_IDS,
   templateForSeed,
   TEMPLATE_IDS,
   TEMPLATES,
@@ -27,12 +28,12 @@ function build(template: TemplateId, seed = 7): GameSpec {
 }
 
 describe("template selection", () => {
-  it("is a seeded pick that eventually covers every template", () => {
+  it("is a seeded pick that eventually covers every campaign template", () => {
     const seen = new Set<TemplateId>();
     for (let seed = 1; seed <= 4096; seed += 1) {
       seen.add(templateForSeed(seed));
     }
-    expect([...seen].sort()).toEqual([...TEMPLATE_IDS].sort());
+    expect([...seen].sort()).toEqual([...CAMPAIGN_TEMPLATE_IDS].sort());
   });
 
   it("is deterministic per seed", () => {
@@ -55,15 +56,26 @@ describe("template selection", () => {
 
 describe("campaign roster", () => {
   it("holds 23 games ordered from gentlest to most brutal", () => {
-    expect(TEMPLATE_IDS).toHaveLength(23);
+    expect(CAMPAIGN_TEMPLATE_IDS).toHaveLength(23);
+    const difficulties = CAMPAIGN_TEMPLATE_IDS.map(
+      (id) => TEMPLATES[id].difficulty,
+    );
+    for (let i = 1; i < difficulties.length; i += 1) {
+      expect(difficulties[i], CAMPAIGN_TEMPLATE_IDS[i]).toBeGreaterThanOrEqual(
+        difficulties[i - 1],
+      );
+    }
+    expect(difficulties[0]).toBe(1);
+    expect(difficulties[difficulties.length - 1]).toBe(5);
+  });
+
+  it("keeps the full roster, recipes included, in ascending difficulty", () => {
     const difficulties = TEMPLATE_IDS.map((id) => TEMPLATES[id].difficulty);
     for (let i = 1; i < difficulties.length; i += 1) {
       expect(difficulties[i], TEMPLATE_IDS[i]).toBeGreaterThanOrEqual(
         difficulties[i - 1],
       );
     }
-    expect(difficulties[0]).toBe(1);
-    expect(difficulties[difficulties.length - 1]).toBe(5);
   });
 
   it("covers every mode at a range of difficulties", () => {

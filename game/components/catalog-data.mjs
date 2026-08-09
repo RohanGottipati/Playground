@@ -290,6 +290,7 @@ const OBJECT_GROUPS = [
       ["Rolling pin", "hazard", true], ["Bottle", "destructible"],
       ["Tin can", "pushable", false, ["can"]], ["Cutting board", "platform"],
       ["Cereal box", "pushable"],
+      ["Water bottle", "destructible", true, ["plastic bottle", "plastic water bottle", "single-use bottle"]],
     ],
   },
   {
@@ -320,6 +321,12 @@ const OBJECT_GROUPS = [
       ["Router", "checkpoint", true], ["Boombox", "spawner", true],
       ["Desk lamp", "light", true, ["lamp"]], ["Wall clock", "timed", true, ["clock"]],
       ["Vacuum cleaner", "force", true, ["vacuum"]],
+      // Brand names never reach the pipeline (lib/utils/genericName.ts scrubs
+      // them), so these carry both the generic and the scrubbed-from aliases.
+      ["Earbud case", "container", true, ["airpods case", "earbuds case", "charging case"]],
+      ["Earbud case open", "hazard", true, ["open earbud case", "open charging case"]],
+      ["Earbuds", "collectible", true, ["airpods", "earphones", "wireless earbuds"]],
+      ["Phone bounce pad", "launcher", true, ["phone launcher", "phone trampoline"]],
     ],
   },
   {

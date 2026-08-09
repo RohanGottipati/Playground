@@ -197,3 +197,19 @@ export function CerealBoxObject({ size, className, label = 'Cereal box' }: Sprit
     </SpriteFrame>);
 
 }
+
+/** Single-use plastic water bottle — light, clear, falls from the sky. */
+export function SingleUseBottleObject({ size, className, animated, label = 'Water bottle' }: SpriteProps) {
+  return (
+    <SpriteFrame size={size} className={className} animated={animated} motionStyle="bob" label={label}>
+      <path d="M20 2h24v26c0 6-3 8-3 14H23c0-6-3-8-3-14z" fill="#bae6fd" {...S} />
+      <path d="M20 12h24M20 20h24" stroke="#7dd3fc" strokeWidth="2" />
+      <rect x="21" y="26" width="22" height="12" rx="2" fill="#f8fafc" {...S} strokeWidth="1.5" />
+      <path d="M25 31h14M27 35h10" stroke="#0ea5e9" strokeWidth="2" />
+      <path d="M25 42h14v8H25z" fill="#a5f3fc" {...S} strokeWidth="1.5" />
+      <rect x="24" y="50" width="16" height="9" rx="2" fill="#0284c7" {...S} />
+      <path d="M27 52v5M31 52v5M35 52v5" stroke="#075985" strokeWidth="1.5" />
+      <path d="M32 62c2 0 2-3 0-3s-2 3 0 3z" fill="#38bdf8" {...S} strokeWidth="1" />
+    </SpriteFrame>);
+
+}

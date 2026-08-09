@@ -48,7 +48,8 @@ const kitchen: ObjectRow[] = [
 [K.BottleObject, 'Bottle', 'Breakable glass object.', 'destructible'],
 [K.CanObject, 'Tin can', 'Stack or roll it to reach ledges.', 'pushable'],
 [K.CuttingBoardObject, 'Cutting board', 'Plank platform for narrow gaps.', 'platform'],
-[K.CerealBoxObject, 'Cereal box', 'Light pushable block.', 'pushable']];
+[K.CerealBoxObject, 'Cereal box', 'Light pushable block.', 'pushable'],
+[K.SingleUseBottleObject, 'Water bottle', 'Clear single-use bottle, light enough to fall.', 'destructible', true]];
 
 
 const food: ObjectRow[] = [
@@ -88,7 +89,11 @@ const tech: ObjectRow[] = [
 [T.BoomboxObject, 'Boombox', 'Spawns rhythm-timed platforms.', 'spawner', true],
 [T.DeskLampObject, 'Desk lamp', 'Directional light cone.', 'light', true],
 [T.WallClockObject, 'Wall clock', 'Displays the level timer in-world.', 'timed', true],
-[T.VacuumObject, 'Vacuum cleaner', 'Pulls nearby pickups toward it.', 'force', true]];
+[T.VacuumObject, 'Vacuum cleaner', 'Pulls nearby pickups toward it.', 'force', true],
+[T.AirpodsCaseObject, 'Earbud case', 'Pocket container that snaps shut.', 'container', true],
+[T.AirpodsCaseOpenObject, 'Earbud case open', 'Open case that launches its buds.', 'hazard', true],
+[T.AirpodsObject, 'Earbuds', 'Pair of buds, small and throwable.', 'collectible', true],
+[T.PhoneBouncePadObject, 'Phone bounce pad', 'Face-up phone that flings the player skyward.', 'launcher', true]];
 
 
 const stationery: ObjectRow[] = [

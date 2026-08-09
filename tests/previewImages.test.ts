@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { TEMPLATE_IDS, TEMPLATES } from "@/game/templates";
+import { CAMPAIGN_TEMPLATE_IDS, TEMPLATES } from "@/game/templates";
 import { composeScenePreviewSvg } from "@/game/templates/previewImage";
 
 const PREVIEW_DIR = join(process.cwd(), "public", "template-previews");
@@ -12,11 +12,11 @@ describe("scene preview composer", () => {
       readdirSync(PREVIEW_DIR)
         .filter((file) => file.endsWith(".svg"))
         .sort(),
-    ).toEqual(TEMPLATE_IDS.map((template) => `${template}.svg`).sort());
+    ).toEqual(CAMPAIGN_TEMPLATE_IDS.map((template) => `${template}.svg`).sort());
   });
 
   it("draws every scene object with its real sprite art", () => {
-    for (const template of TEMPLATE_IDS) {
+    for (const template of CAMPAIGN_TEMPLATE_IDS) {
       const analysis = TEMPLATES[template].previewAnalysis;
       const svg = composeScenePreviewSvg(analysis);
 
@@ -30,7 +30,7 @@ describe("scene preview composer", () => {
   });
 
   it("is deterministic, so regenerating never churns the committed files", () => {
-    for (const template of TEMPLATE_IDS) {
+    for (const template of CAMPAIGN_TEMPLATE_IDS) {
       const analysis = TEMPLATES[template].previewAnalysis;
       expect(composeScenePreviewSvg(analysis)).toBe(
         composeScenePreviewSvg(analysis),
@@ -39,7 +39,7 @@ describe("scene preview composer", () => {
   });
 
   it("has a committed cover on disk matching the composer", () => {
-    for (const template of TEMPLATE_IDS) {
+    for (const template of CAMPAIGN_TEMPLATE_IDS) {
       const file = join(PREVIEW_DIR, `${template}.svg`);
       expect(existsSync(file), `missing cover for ${template}`).toBe(true);
       expect(readFileSync(file, "utf8").trim(), template).toBe(

@@ -3,7 +3,7 @@ import {
   buildCampaignSeedGames,
   campaignGameId,
 } from "@/game/templates/campaignSeed";
-import { TEMPLATE_IDS } from "@/game/templates";
+import { CAMPAIGN_TEMPLATE_IDS } from "@/game/templates";
 
 describe("campaign seed rows", () => {
   const start = new Date("2026-08-09T00:00:00.000Z");
@@ -11,7 +11,7 @@ describe("campaign seed rows", () => {
   it("builds the full stable, published campaign order", () => {
     const games = buildCampaignSeedGames({ publishedAtStart: start });
     expect(games).toHaveLength(23);
-    expect(games.map((game) => game.template)).toEqual(TEMPLATE_IDS);
+    expect(games.map((game) => game.template)).toEqual(CAMPAIGN_TEMPLATE_IDS);
     expect(new Set(games.map((game) => game.id)).size).toBe(23);
     expect(new Set(games.map((game) => game.slug)).size).toBe(23);
     for (const game of games) {
