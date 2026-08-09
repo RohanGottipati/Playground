@@ -118,10 +118,11 @@ export function buildBathtimeSpec(
       howToPlay: [
         "Objects fall slowly and only a couple at a time — watch their shadows and step aside.",
         "Duck under the two big shelters whenever you want a breather; drops shatter on them.",
+        "The shelters occasionally shift a little — a quick glance keeps you under cover.",
         "One touch sends you back to the start, but the timer only resets on a hit.",
       ],
       controls: BASE_CONTROLS,
-      tip: "You can win this one standing under a shelter — step out only for the pickups.",
+      tip: "You can win this one mostly parked under a shelter — step out only for the pickups.",
     },
     world: baseWorld(),
     player: basePlayer(),

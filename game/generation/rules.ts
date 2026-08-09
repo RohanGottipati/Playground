@@ -68,12 +68,12 @@ export function buildRules(input: RulesInput): GameRules {
         headline: "Run the gauntlet",
         objective: `A machine on the far right is hurling ${input.ammoLabel ?? "object"}s at you. Cross the course built from your ${objects} and touch the finish flag beside it.`,
         howToPlay: [
-          `Low ${input.ammoLabel ?? "object"}s skim the floor — jump them or shelter behind cover; shots smash against cover blocks.`,
-          "High shots pass over the covers — stay low and let them fly by.",
+          `Low ${input.ammoLabel ?? "object"}s skim the floor — jump over them; they fly straight through cover blocks and anything else in the way.`,
+          "High shots pass at head height — stay grounded and let them fly by.",
           "Touching the machine itself hurts; the flag is planted just in front of it.",
         ],
         controls: BASE_CONTROLS,
-        tip: "Wait behind cover for a volley to smash, then sprint the next stretch.",
+        tip: "Read each volley's height and time your jump — nothing blocks a shot but you.",
       };
 
     case "skyfall":
@@ -84,6 +84,7 @@ export function buildRules(input: RulesInput): GameRules {
           howToPlay: [
             "A falling object only counts as dodged while you are out in the storm — the spawn corner pauses your streak.",
             "Duck under platforms: objects shatter on them, and every shatter counts.",
+            "Shelters drift and can briefly vanish — don't count on one spot staying safe.",
             "One touch sends you back to the start and resets your dodge streak.",
           ],
           controls: BASE_CONTROLS,
@@ -97,6 +98,7 @@ export function buildRules(input: RulesInput): GameRules {
             howToPlay: [
               `${capitalize(input.skyfallLabel ?? "objects")} fall from above at random spots — one touch sends you back to the start.`,
               "Falling objects vanish when they hit the ground, so short pauses between waves are your chance to move.",
+              "Shelters drift and can briefly vanish too — don't memorize a fixed safe spot.",
               "The area right at your spawn is a safe zone; nothing falls there.",
               input.collectibleCount > 0
                 ? `The ${input.collectibleCount} collectibles are optional but brag-worthy.`
@@ -111,6 +113,7 @@ export function buildRules(input: RulesInput): GameRules {
             howToPlay: [
               `${capitalize(input.skyfallLabel ?? "objects")} fall from above at random spots — one touch resets your survival timer.`,
               "Duck under platforms — falling objects smash to pieces on them.",
+              "Shelters drift and can briefly vanish — memorizing one safe square won't get you through.",
               "The spawn corner is a safe zone, but the timer only counts down while you are out braving the storm.",
               input.collectibleCount > 0
                 ? `The ${input.collectibleCount} collectibles are optional but brag-worthy.`

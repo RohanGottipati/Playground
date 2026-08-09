@@ -119,6 +119,7 @@ export function buildDrivewaySpec(
       howToPlay: [
         `A ${fallers} counts as dodged when it smashes while you are out in the storm.`,
         "There is exactly one real shelter. The perch beside it is fast but exposed.",
+        "The shelter slides around and sometimes vanishes for a beat — don't memorize a safe square.",
         "Six objects fall at once at near-full speed — keep moving, never stargaze.",
         "One touch resets your streak to zero and sends you back to the start.",
       ],

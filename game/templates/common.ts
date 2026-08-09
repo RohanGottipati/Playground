@@ -127,7 +127,7 @@ export function movingPlat(
   };
 }
 
-/** Standable cover block sized so gauntlet volleys smash against it. */
+/** Standable terrain block for gauntlet levels; volleys fly straight through it. */
 export function coverBlock(
   id: string,
   label: string | undefined,

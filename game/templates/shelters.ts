@@ -9,9 +9,9 @@ import type { GameEntitySpec, GameSpec, Rect } from "@/game/types";
 /** Cover never shrinks below a strip the player can still stand on. */
 const MIN_SHELTER_WIDTH = MIN_LANDING_WIDTH + 8;
 /** Two shelters in the same row never merge into one continuous roof. */
-const MIN_SHELTER_GAP = 100;
+export const MIN_SHELTER_GAP = 100;
 /** Falling objects spawn in [SKYFALL_SAFE_ZONE_X + 60, width - 60]. */
-const EDGE_MARGIN = 60;
+export const EDGE_MARGIN = 60;
 /** A pickup hovering this close above a shelter travels with it. */
 const CARRIED_PICKUP_REACH = 170;
 /** Pickups keep this much clearance from their shelter's ends. */
@@ -38,13 +38,39 @@ const PROFILES: Record<1 | 2 | 3 | 4 | 5, ShelterProfile> = {
   5: { maxShrink: 0.55, driftPx: 300 },
 };
 
+export type ShelterMovementProfile = {
+  /** Milliseconds between shake-up rolls once the run has started. */
+  cycleIntervalMs: number;
+  /** Chance a given shelter relocates on a roll it's picked for. */
+  moveChance: number;
+  /** Chance a given shelter vanishes (temporarily) on a roll it's picked for. */
+  vanishChance: number;
+  /** How long a vanished shelter stays gone before it reappears. */
+  vanishDurationMs: number;
+  /** How long a relocation slide takes. */
+  tweenDurationMs: number;
+};
+
+/**
+ * How restless the cover is, mid-run, per template difficulty. A 1★ drizzle
+ * (bathtime) barely fidgets — its rules promise you can win parked under one
+ * shelter. A 5★ storm (toystorm) never lets a spot feel safe for long.
+ */
+export const SHELTER_MOVEMENT_PROFILES: Record<1 | 2 | 3 | 4 | 5, ShelterMovementProfile> = {
+  1: { cycleIntervalMs: 6000, moveChance: 0.15, vanishChance: 0.05, vanishDurationMs: 900, tweenDurationMs: 900 },
+  2: { cycleIntervalMs: 5000, moveChance: 0.25, vanishChance: 0.12, vanishDurationMs: 1100, tweenDurationMs: 800 },
+  3: { cycleIntervalMs: 4200, moveChance: 0.35, vanishChance: 0.2, vanishDurationMs: 1300, tweenDurationMs: 700 },
+  4: { cycleIntervalMs: 3400, moveChance: 0.48, vanishChance: 0.3, vanishDurationMs: 1500, tweenDurationMs: 600 },
+  5: { cycleIntervalMs: 2600, moveChance: 0.6, vanishChance: 0.4, vanishDurationMs: 1700, tweenDurationMs: 500 },
+};
+
 /** Static slabs are the only thing falling objects smash against. */
-function isShelter(entity: GameEntitySpec): boolean {
+export function isShelter(entity: GameEntitySpec): boolean {
   return entity.mechanic === "static_platform";
 }
 
 /** Rows are hand-placed at identical heights (floor cover, perches, ...). */
-function rowsByTop(shelters: GameEntitySpec[]): GameEntitySpec[][] {
+export function rowsByTop(shelters: GameEntitySpec[]): GameEntitySpec[][] {
   const rows = new Map<number, GameEntitySpec[]>();
   for (const shelter of shelters) {
     const row = rows.get(shelter.bounds.y) ?? [];

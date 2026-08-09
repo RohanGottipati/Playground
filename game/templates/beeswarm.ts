@@ -123,6 +123,7 @@ export function buildBeeswarmSpec(
       howToPlay: [
         `A ${fallers} only counts as dodged if you are out in the storm when it smashes.`,
         "Three shelters and a high perch give cover — but hiding pauses your streak.",
+        "None of the shelters stay put for long, and one can vanish without warning.",
         "Five objects can fall at once now. Watch the shadows, not the sky.",
         "One touch sends you back to the start and resets your dodge streak.",
       ],

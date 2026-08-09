@@ -37,8 +37,17 @@ import {
   createProjectileVisual,
   createSkyfallVisual,
   destroyEntityArt,
+  syncEntityArt,
 } from "@/game/art/entityArt";
 import { createGroundArt, createWorldBackdrop } from "@/game/art/worldArt";
+import {
+  EDGE_MARGIN,
+  isShelter,
+  MIN_SHELTER_GAP,
+  rowsByTop,
+  SHELTER_MOVEMENT_PROFILES,
+  type ShelterMovementProfile,
+} from "@/game/templates/shelters";
 
 const PORTAL_COOLDOWN_MS = 900;
 const HUD_INTERVAL_MS = 100;
@@ -59,6 +68,12 @@ type Projectile = Phaser.GameObjects.Rectangle & {
 type Faller = Phaser.GameObjects.Rectangle & {
   body: Phaser.Physics.Arcade.Body;
   visual: Phaser.GameObjects.Container;
+};
+
+type ShelterRuntime = {
+  rect: StaticRect;
+  vanished: boolean;
+  busy: boolean;
 };
 
 export class GameScene extends Phaser.Scene {
@@ -107,6 +122,8 @@ export class GameScene extends Phaser.Scene {
   private rng!: Rng;
   private skyfallTimer: Phaser.Time.TimerEvent | undefined;
   private gauntletTimer: Phaser.Time.TimerEvent | undefined;
+  private shelterTimer: Phaser.Time.TimerEvent | undefined;
+  private shelterRows: ShelterRuntime[][] = [];
 
   constructor() {
     super("GameScene");
@@ -140,6 +157,8 @@ export class GameScene extends Phaser.Scene {
     this.goal = undefined;
     this.skyfallTimer = undefined;
     this.gauntletTimer = undefined;
+    this.shelterTimer = undefined;
+    this.shelterRows = [];
 
     const { width, height, gravityY } = this.spec.world;
     this.physics.world.setBounds(0, 0, width, height);
@@ -153,12 +172,18 @@ export class GameScene extends Phaser.Scene {
     this.solids = solids;
     const bouncePads: Phaser.GameObjects.GameObject[] = [];
     const hazards: Phaser.GameObjects.GameObject[] = [];
+    const shelterById = new Map<string, StaticRect>();
 
     for (const entity of this.spec.entities) {
       switch (entity.mechanic) {
-        case "static_platform":
-          solids.push(createStaticPlatform(this, entity, this.palette));
+        case "static_platform": {
+          const platform = createStaticPlatform(this, entity, this.palette);
+          solids.push(platform);
+          if (this.spec.skyfall && isShelter(entity)) {
+            shelterById.set(entity.id, platform);
+          }
           break;
+        }
         case "moving_platform":
           solids.push(createMovingPlatform(this, entity, this.palette));
           break;
@@ -189,6 +214,18 @@ export class GameScene extends Phaser.Scene {
           this.goal = createGoal(this, entity, this.palette);
           break;
       }
+    }
+
+    if (this.spec.skyfall && shelterById.size > 0) {
+      const shelterEntities = this.spec.entities.filter(isShelter);
+      this.shelterRows = rowsByTop(shelterEntities)
+        .map((row) =>
+          row
+            .map((entity) => shelterById.get(entity.id))
+            .filter((rect): rect is StaticRect => Boolean(rect))
+            .map((rect) => ({ rect, vanished: false, busy: false })),
+        )
+        .filter((row) => row.length > 0);
     }
 
     // Legacy shooter/rush specs carry a door that starts locked; new specs of
@@ -546,8 +583,8 @@ export class GameScene extends Phaser.Scene {
     if (!gauntlet || !this.started || this.completed) return;
     if (this.enemyShots.length >= 4) return;
 
-    // Low shots skim the floor (jump or hide); high shots fly over cover
-    // (stay grounded). The mix keeps both instincts honest.
+    // Low shots skim the floor (jump them); high shots fly over at head
+    // height (stay grounded). The mix keeps both instincts honest.
     const low = this.rng.next() < 0.6;
     const y = low ? GROUND_TOP - 22 : GROUND_TOP - 92;
     const muzzle = this.turretMuzzle();
@@ -592,13 +629,12 @@ export class GameScene extends Phaser.Scene {
       repeat: -1,
     });
 
+    // Shots ignore every obstacle in their path — cover blocks are terrain,
+    // not a projectile shield. Only the player (below) or the world edge
+    // (updateEnemyShots) stops one.
     this.physics.add.overlap(this.player, shot, () => {
       this.removeEnemyShot(shot);
       this.killPlayer();
-    });
-    // Cover blocks earn their name: shots smash against any solid.
-    this.physics.add.collider(shot, this.solids, () => {
-      this.smashEnemyShot(shot);
     });
 
     this.enemyShots.push(shot);
@@ -609,20 +645,6 @@ export class GameScene extends Phaser.Scene {
       shot.visual.setPosition(shot.x, shot.y);
       if (shot.x < -30) this.removeEnemyShot(shot);
     }
-  }
-
-  private smashEnemyShot(shot: Projectile) {
-    if (!this.enemyShots.includes(shot)) return;
-    const poof = this.add.circle(shot.x, shot.y, 6, this.palette.hazard, 0.85);
-    poof.setDepth(9);
-    this.tweens.add({
-      targets: poof,
-      radius: 20,
-      alpha: 0,
-      duration: 220,
-      onComplete: () => poof.destroy(),
-    });
-    this.removeEnemyShot(shot);
   }
 
   private removeEnemyShot(shot: Projectile) {
@@ -641,6 +663,118 @@ export class GameScene extends Phaser.Scene {
       delay: skyfall.intervalMs,
       loop: true,
       callback: () => this.spawnFaller(),
+    });
+    if (this.shelterRows.length > 0) {
+      const profile = SHELTER_MOVEMENT_PROFILES[this.spec.difficulty];
+      this.shelterTimer = this.time.addEvent({
+        delay: profile.cycleIntervalMs,
+        loop: true,
+        callback: () => this.shuffleShelters(profile),
+      });
+    }
+  }
+
+  /**
+   * Once per cycle, at most one shelter per row either slides to a new spot
+   * or briefly vanishes — difficulty controls how often and for how long.
+   * A shelter already mid-move/vanish, or already gone, sits this roll out.
+   */
+  private shuffleShelters(profile: ShelterMovementProfile) {
+    if (!this.started || this.completed) return;
+    for (const row of this.shelterRows) {
+      const index = this.rng.int(0, row.length - 1);
+      const shelter = row[index];
+      if (shelter.vanished || shelter.busy) continue;
+
+      const hasVisibleSibling = row.some(
+        (other) => other !== shelter && !other.vanished,
+      );
+      const canVanish = row.length === 1 || hasVisibleSibling;
+
+      if (canVanish && this.rng.next() < profile.vanishChance) {
+        this.vanishShelter(shelter, profile);
+      } else if (this.rng.next() < profile.moveChance) {
+        this.relocateShelter(shelter, row[index - 1], row[index + 1], profile);
+      }
+    }
+  }
+
+  /** Slides a shelter to a new spot, clamped between its row neighbours. */
+  private relocateShelter(
+    shelter: ShelterRuntime,
+    prev: ShelterRuntime | undefined,
+    next: ShelterRuntime | undefined,
+    profile: ShelterMovementProfile,
+  ) {
+    const rect = shelter.rect;
+    const halfWidth = rect.width / 2;
+    const leftBound = prev
+      ? prev.rect.x + prev.rect.width / 2 + MIN_SHELTER_GAP + halfWidth
+      : SKYFALL_SAFE_ZONE_X + EDGE_MARGIN + halfWidth;
+    const rightBound = next
+      ? next.rect.x - next.rect.width / 2 - MIN_SHELTER_GAP - halfWidth
+      : this.spec.world.width - EDGE_MARGIN - halfWidth;
+    if (rightBound <= leftBound) return;
+
+    const targetX = this.rng.int(Math.round(leftBound), Math.round(rightBound));
+    if (Math.abs(targetX - rect.x) < 12) return;
+
+    shelter.busy = true;
+    this.tweens.add({
+      targets: rect,
+      x: targetX,
+      duration: profile.tweenDurationMs,
+      ease: "Sine.easeInOut",
+      onUpdate: () => {
+        rect.body.updateFromGameObject();
+        syncEntityArt(rect);
+      },
+      onComplete: () => {
+        shelter.busy = false;
+      },
+    });
+  }
+
+  /** Fades a shelter out, drops it from `solids`, then restores it later. */
+  private vanishShelter(shelter: ShelterRuntime, profile: ShelterMovementProfile) {
+    shelter.busy = true;
+    const fadeTargets: (Phaser.GameObjects.Container | Phaser.GameObjects.Text)[] =
+      [shelter.rect.art];
+    if (shelter.rect.artLabel) fadeTargets.push(shelter.rect.artLabel);
+
+    this.tweens.add({
+      targets: fadeTargets,
+      alpha: 0,
+      duration: 260,
+      onComplete: () => {
+        shelter.vanished = true;
+        const solidIndex = this.solids.indexOf(shelter.rect);
+        if (solidIndex >= 0) this.solids.splice(solidIndex, 1);
+        this.time.delayedCall(profile.vanishDurationMs, () =>
+          this.reappearShelter(shelter),
+        );
+      },
+    });
+  }
+
+  private reappearShelter(shelter: ShelterRuntime) {
+    if (this.completed) {
+      shelter.busy = false;
+      return;
+    }
+    if (!this.solids.includes(shelter.rect)) this.solids.push(shelter.rect);
+    shelter.vanished = false;
+    const fadeTargets: (Phaser.GameObjects.Container | Phaser.GameObjects.Text)[] =
+      [shelter.rect.art];
+    if (shelter.rect.artLabel) fadeTargets.push(shelter.rect.artLabel);
+
+    this.tweens.add({
+      targets: fadeTargets,
+      alpha: 1,
+      duration: 260,
+      onComplete: () => {
+        shelter.busy = false;
+      },
     });
   }
 

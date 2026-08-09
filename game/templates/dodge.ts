@@ -65,6 +65,7 @@ export function buildDodgeSpec(
       howToPlay: [
         `A ${fallers} only counts as dodged if you are out in the storm when it smashes — hiding in the spawn corner pauses your streak.`,
         "Duck under the shelters: falling objects shatter on them, and every shatter counts.",
+        "Shelters drift and can briefly vanish mid-run — don't count on one spot staying safe.",
         "One touch sends you back to the start and resets your dodge streak to zero.",
         "The 4 shiny pickups are optional, but grabbing them mid-storm is serious bragging rights.",
       ],
