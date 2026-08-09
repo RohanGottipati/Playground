@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PlaygroundGrid } from "@/components/playground/PlaygroundGrid";
+import { PlaygroundBrowseAllSection } from "@/components/playground/PlaygroundBrowseAllSection";
 import { PlaygroundHero } from "@/components/playground/PlaygroundHero";
 import { PlaygroundListSection } from "@/components/playground/PlaygroundListSection";
 import { PlaygroundShelf } from "@/components/playground/PlaygroundShelf";
@@ -74,15 +74,7 @@ export default async function PlaygroundPage() {
           games={hardest}
         />
 
-        <section className="space-y-4">
-          <h2
-            className="font-inter font-medium text-appleInk"
-            style={{ fontSize: 20, letterSpacing: "-0.03em" }}
-          >
-            Browse All Games
-          </h2>
-          <PlaygroundGrid initialGames={newest} />
-        </section>
+        <PlaygroundBrowseAllSection initialGames={newest} />
       </div>
     </>
   );

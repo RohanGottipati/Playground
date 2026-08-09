@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Rubik, Fraunces, Inter } from "next/font/google";
 import "./globals.css";
-import { CustomCursor } from "@/components/ui/CustomCursor";
 import { NavBar } from "@/components/layout/NavBar";
 import { SiteBackground } from "@/components/layout/SiteBackground";
 
@@ -50,8 +49,6 @@ export default function RootLayout({
       <body
         className={`${display.variable} ${body.variable} ${serif.variable} ${inter.variable} min-h-dvh font-body antialiased`}
       >
-        <CustomCursor />
-
         <SiteBackground />
 
         <NavBar />

@@ -2,18 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useRef, useState } from "react";
 
 const ITEMS = [
-  { href: "/", label: "Home", isHome: true },
   { href: "/playground", label: "Playground" },
   { href: "/stats", label: "Stats" },
   { href: "/create", label: "Make a game" },
 ];
-
-// Routes that render a light/white background instead of the dark video bg,
-// so the pill needs an inverted, dark-on-light color scheme to stay legible.
-const LIGHT_BG_ROUTES = ["/", "/playground", "/stats", "/create"];
 
 function HomeIcon({ className }: { className?: string }) {
   return (
@@ -33,77 +27,79 @@ function HomeIcon({ className }: { className?: string }) {
   );
 }
 
+function JoystickIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="6" r="2.5" />
+      <path d="M12 8.5V14" />
+      <rect x="4" y="14" width="16" height="6" rx="2.5" />
+      <path d="M8.5 17h.01M15.5 15.5l1 1M15.5 18.5l1-1" />
+    </svg>
+  );
+}
+
+// Every route that renders this nav sits on top of an opaque light panel
+// (the video background is only ever visible behind the landing page, which
+// never shows the nav), so the pill can stay on a single light color scheme.
 export function NavPill() {
   const pathname = usePathname();
-  const isLightBg = LIGHT_BG_ROUTES.some(
-    (route) => pathname === route || pathname?.startsWith(`${route}/`),
-  );
-  const containerRef = useRef<HTMLElement>(null);
-  const itemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
-  const [hovered, setHovered] = useState<number | null>(null);
-  const [highlight, setHighlight] = useState<{ left: number; width: number } | null>(null);
+  const isGamePage = pathname?.startsWith("/game/") ?? false;
 
-  function handleEnter(index: number) {
-    const el = itemRefs.current[index];
-    const container = containerRef.current;
-    if (!el || !container) return;
-    const elRect = el.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    setHighlight({ left: elRect.left - containerRect.left, width: elRect.width });
-    setHovered(index);
-  }
+  const circleBase =
+    "flex h-11 w-11 items-center justify-center rounded-full shadow-lg backdrop-blur-xl backdrop-saturate-150 transition-colors duration-150";
+  const circleIdle =
+    "border border-ink/15 bg-white/80 text-ink/60 hover:border-ink/30 hover:text-ink";
+  const circleActive = "border border-ink bg-ink text-white";
 
   return (
-    <nav
-      ref={containerRef}
-      aria-label="Main"
-      onMouseLeave={() => setHovered(null)}
-      className={`relative flex items-center rounded-[22px] p-1.5 shadow-lg backdrop-blur-xl backdrop-saturate-150 ${
-        isLightBg
-          ? "bg-white/70 shadow-black/10 ring-1 ring-black/[0.06]"
-          : "bg-white/20 shadow-black/20"
-      }`}
-    >
-      <span
-        className={`nav-highlight pointer-events-none absolute top-1.5 bottom-1.5 rounded-xl ${
-          isLightBg ? "bg-ink" : "bg-white"
-        }`}
-        style={{
-          left: highlight ? highlight.left : 0,
-          width: highlight ? highlight.width : 0,
-          opacity: hovered !== null && highlight ? 1 : 0,
-        }}
-      />
-      {ITEMS.map((item, index) => {
-        const isHovered = hovered === index;
-        const isStaticWhite = hovered === null && index !== 0;
-        const isHighlighted = isHovered || isStaticWhite;
-        const textColor = isLightBg
-          ? isHighlighted
-            ? "text-white"
-            : "text-ink"
-          : isHighlighted
-            ? "text-ink"
-            : "text-white";
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-label={item.isHome ? "Home" : undefined}
-            ref={(node) => {
-              itemRefs.current[index] = node;
-            }}
-            onMouseEnter={() => handleEnter(index)}
-            className={`relative z-10 rounded-xl font-body font-medium transition-colors duration-150 ${
-              item.isHome ? "p-2" : "px-4 py-2 text-sm"
-            } ${textColor} ${
-              isStaticWhite ? (isLightBg ? "bg-ink" : "bg-white") : "bg-transparent"
-            }`}
-          >
-            {item.isHome ? <HomeIcon className="h-4 w-4" /> : item.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <div className="flex items-center gap-2">
+      <Link
+        href="/"
+        aria-label="Home"
+        className={`${circleBase} ${circleIdle}`}
+      >
+        <HomeIcon className="h-4 w-4" />
+      </Link>
+
+      <nav
+        aria-label="Main"
+        className="relative flex items-center gap-1 rounded-[22px] border border-ink/10 bg-white/80 p-1.5 shadow-lg backdrop-blur-xl backdrop-saturate-150"
+      >
+        {ITEMS.map((item) => {
+          const isActive =
+            pathname === item.href || pathname?.startsWith(`${item.href}/`);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`relative rounded-xl px-4 py-2 font-body text-sm font-medium transition-colors duration-150 ${
+                isActive
+                  ? "bg-ink text-white"
+                  : "bg-transparent text-ink/70 hover:text-ink"
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <Link
+        href="/playground"
+        aria-label="Play"
+        className={`${circleBase} ${isGamePage ? circleActive : circleIdle}`}
+      >
+        <JoystickIcon className="h-4 w-4" />
+      </Link>
+    </div>
   );
 }
