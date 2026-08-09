@@ -80,19 +80,28 @@ export function StatsDashboard({ initial }: { initial: StatsSnapshot }) {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <ActivityFeed items={stats.recentActivity} />
-        <div className="panel">
-          <h3 className="marquee-title mb-3 text-base text-token">
+        <div className="rounded-3xl bg-appleBg p-5">
+          <h3
+            className="mb-3 font-inter font-medium text-appleInk"
+            style={{ fontSize: 16, letterSpacing: "-0.02em" }}
+          >
             Mechanic discoveries
           </h3>
           {stats.discoveries.length === 0 ? (
-            <p className="font-mono text-xs text-paper/60">
+            <p className="font-inter text-xs text-appleGray" style={{ letterSpacing: "-0.01em" }}>
               Nothing discovered yet. Photograph something unusual.
             </p>
           ) : (
-            <ul className="space-y-1 font-mono text-[11px] text-paper/70">
+            <ul className="divide-y divide-white">
               {stats.discoveries.slice(0, 20).map((discovery) => (
-                <li key={discovery.id}>
-                  {discovery.objectLabel} → {discovery.mechanic} ·{" "}
+                <li
+                  key={discovery.id}
+                  className="py-1.5 font-inter text-xs text-appleGray first:pt-0 last:pb-0"
+                  style={{ letterSpacing: "-0.01em" }}
+                >
+                  <span className="text-appleInk">{discovery.objectLabel}</span>
+                  {" → "}
+                  {discovery.mechanic.replace(/_/g, " ")} ·{" "}
                   {discovery.discoveryCount}×
                 </li>
               ))}

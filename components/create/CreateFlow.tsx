@@ -3,7 +3,6 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { GamePlayer } from "@/components/game/GamePlayer";
-import { DifficultyBadge, ModeBadge } from "@/components/ui/Badge";
 import { compressImage } from "@/lib/utils/imageCompression";
 import type { SceneAnalysis } from "@/lib/backboard/schemas";
 import type { GameSpec } from "@/game/types";
@@ -11,6 +10,7 @@ import { CameraCapture } from "./CameraCapture";
 import { GenerationProgress, type GenerationStep } from "./GenerationProgress";
 import { PublishPanel } from "./PublishPanel";
 import { ScanAnimation } from "./ScanAnimation";
+import { modeMeta, tierFor } from "@/components/ui/difficulty";
 
 type GenerateResponse = {
   gameId: string;
@@ -206,11 +206,14 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
   return (
     <div className="space-y-6">
       {phase === "capture" ? (
-        <div className="panel space-y-4">
-          <h1 className="marquee-title text-2xl text-token">
+        <div className="space-y-4 rounded-3xl bg-appleBg p-6">
+          <h2
+            className="font-inter font-medium text-appleInk"
+            style={{ fontSize: 20, letterSpacing: "-0.03em" }}
+          >
             Photograph an object
-          </h1>
-          <p className="font-body text-sm text-paper/80">
+          </h2>
+          <p className="font-inter text-sm text-appleGray" style={{ letterSpacing: "-0.01em" }}>
             Photograph one object or arrange several on a desk or floor. Keep
             each object fully visible with clear space around it so its shape
             and position can become part of the level.
@@ -222,8 +225,11 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
       {phase === "working" && previewUrl ? (
         <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
           <ScanAnimation imageUrl={previewUrl} scanning />
-          <div className="panel">
-            <h2 className="marquee-title mb-3 text-lg text-token">
+          <div className="rounded-3xl bg-appleBg p-6">
+            <h2
+              className="mb-4 font-inter font-medium text-appleInk"
+              style={{ fontSize: 18, letterSpacing: "-0.02em" }}
+            >
               Building your game
             </h2>
             <GenerationProgress current={step} />
@@ -234,24 +240,33 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
       {phase === "failed" && previewUrl && error ? (
         <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
           <ScanAnimation imageUrl={previewUrl} scanning={false} />
-          <div className="panel space-y-4">
-            <h2 className="marquee-title text-lg text-marquee">
+          <div className="space-y-4 rounded-3xl bg-appleBg p-6">
+            <h2
+              className="font-inter font-medium text-appleInk"
+              style={{ fontSize: 18, letterSpacing: "-0.02em" }}
+            >
               We could not analyze this photo
             </h2>
-            <p className="font-mono text-xs text-paper/80" role="alert">
+            <p className="font-inter text-sm text-appleGray" style={{ letterSpacing: "-0.01em" }} role="alert">
               {error.message}
             </p>
             <div className="flex flex-wrap gap-3">
               {error.retryable && uploaded ? (
                 <button
                   type="button"
-                  className="btn-primary"
                   onClick={() => void retryAnalysis()}
+                  className="rounded-full bg-appleInk px-5 py-2.5 font-inter text-sm font-medium text-white transition hover:bg-black"
+                  style={{ letterSpacing: "-0.02em" }}
                 >
                   Retry analysis
                 </button>
               ) : null}
-              <button type="button" className="btn-secondary" onClick={reset}>
+              <button
+                type="button"
+                onClick={reset}
+                className="rounded-full border border-appleGray/30 px-5 py-2.5 font-inter text-sm font-medium text-appleInk transition hover:border-appleGray/60"
+                style={{ letterSpacing: "-0.02em" }}
+              >
                 Choose another photo
               </button>
             </div>
@@ -263,15 +278,33 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <ModeBadge mode={result.gameSpec.mode ?? "classic"} />
-              <DifficultyBadge difficulty={result.gameSpec.difficulty} />
-              <span className="font-mono text-xs uppercase text-paper/60">
+              <span
+                className="rounded-full bg-appleBg px-3 py-1 font-inter text-xs font-medium text-appleInk"
+                style={{ letterSpacing: "-0.01em" }}
+              >
+                {modeMeta(result.gameSpec.mode ?? "classic").label}
+              </span>
+              <span
+                className="rounded-full bg-appleBg px-3 py-1 font-inter text-xs font-medium text-appleInk"
+                style={{ letterSpacing: "-0.01em" }}
+              >
+                {tierFor(result.gameSpec.difficulty).label}
+              </span>
+              <span
+                className="font-inter text-xs text-appleGray"
+                style={{ letterSpacing: "-0.01em" }}
+              >
                 {result.gameSpec.source.detectedObjectCount} objects ·{" "}
                 {result.gameSpec.theme} theme ·{" "}
                 {Math.round(result.generationMetadata.latencyMs / 100) / 10}s
               </span>
             </div>
-            <button type="button" className="btn-ghost text-xs" onClick={reset}>
+            <button
+              type="button"
+              onClick={reset}
+              className="font-inter text-xs font-medium text-appleBlue hover:underline"
+              style={{ letterSpacing: "-0.01em" }}
+            >
               Start over with a new photo
             </button>
           </div>
@@ -289,17 +322,23 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
                 defaultTitle={result.gameSpec.title}
               />
               {result.gameSpec.rules ? (
-                <div className="panel">
-                  <h2 className="marquee-title mb-2 text-lg text-token">
+                <div className="space-y-1 rounded-3xl bg-appleBg p-6">
+                  <h2
+                    className="font-inter font-medium text-appleInk"
+                    style={{ fontSize: 16, letterSpacing: "-0.02em" }}
+                  >
                     {result.gameSpec.rules.headline}
                   </h2>
-                  <p className="font-body text-sm text-paper/80">
+                  <p className="font-inter text-sm text-appleGray" style={{ letterSpacing: "-0.01em" }}>
                     {result.gameSpec.rules.objective}
                   </p>
                 </div>
               ) : null}
-              <div className="panel">
-                <h2 className="marquee-title mb-3 text-lg text-token">
+              <div className="rounded-3xl bg-appleBg p-6">
+                <h2
+                  className="mb-3 font-inter font-medium text-appleInk"
+                  style={{ fontSize: 16, letterSpacing: "-0.02em" }}
+                >
                   What we found
                 </h2>
                 <div className="flex flex-wrap gap-2">
@@ -308,7 +347,8 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
                     .map((entity) => (
                       <span
                         key={entity.id}
-                        className="rounded-full border-2 border-ink bg-cabinet px-3 py-1 font-mono text-[11px] text-paper/80"
+                        className="rounded-full bg-white px-3 py-1 font-inter text-xs text-appleGray"
+                        style={{ letterSpacing: "-0.01em" }}
                       >
                         {entity.sourceLabel} →{" "}
                         {entity.mechanic.replace(/_/g, " ")}
@@ -316,8 +356,11 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
                     ))}
                 </div>
                 {result.gameSpec.validation.repairActions.length > 0 ? (
-                  <details className="mt-3 font-mono text-[11px] text-paper/60">
-                    <summary className="cursor-pointer">
+                  <details
+                    className="mt-3 font-inter text-xs text-appleGray"
+                    style={{ letterSpacing: "-0.01em" }}
+                  >
+                    <summary className="cursor-pointer text-appleInk">
                       Playability fixes applied
                     </summary>
                     <ul className="mt-2 space-y-1">
@@ -329,11 +372,14 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
                 ) : null}
               </div>
               {result.gameSpec.magicPatterns?.editorUrl ? (
-                <div className="panel space-y-2">
-                  <h2 className="marquee-title text-lg text-token">
+                <div className="space-y-2 rounded-3xl bg-appleBg p-6">
+                  <h2
+                    className="font-inter font-medium text-appleInk"
+                    style={{ fontSize: 16, letterSpacing: "-0.02em" }}
+                  >
                     Design kit
                   </h2>
-                  <p className="font-mono text-xs text-paper/70">
+                  <p className="font-inter text-xs text-appleGray" style={{ letterSpacing: "-0.01em" }}>
                     Magic Patterns generated a matching art direction for this
                     level and tinted its palette.
                   </p>
@@ -342,7 +388,8 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
                       href={result.gameSpec.magicPatterns.editorUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="btn-secondary px-3 py-2 text-xs"
+                      className="rounded-full border border-appleGray/30 px-4 py-2 font-inter text-xs font-medium text-appleInk transition hover:border-appleGray/60"
+                      style={{ letterSpacing: "-0.01em" }}
                     >
                       Open design in Magic Patterns editor ↗
                     </a>
@@ -351,7 +398,8 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
                         href={result.gameSpec.magicPatterns.previewUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="btn-ghost px-3 py-2 text-xs"
+                        className="rounded-full px-4 py-2 font-inter text-xs font-medium text-appleBlue transition hover:underline"
+                        style={{ letterSpacing: "-0.01em" }}
                       >
                         Preview ↗
                       </a>
@@ -359,7 +407,11 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
                   </div>
                 </div>
               ) : null}
-              <Link href="/playground" className="btn-ghost w-full">
+              <Link
+                href="/playground"
+                className="block w-full rounded-full border border-appleGray/30 py-2.5 text-center font-inter text-sm font-medium text-appleInk transition hover:border-appleGray/60"
+                style={{ letterSpacing: "-0.02em" }}
+              >
                 Browse the Playground
               </Link>
             </div>

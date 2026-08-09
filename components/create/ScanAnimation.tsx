@@ -12,7 +12,7 @@ type Props = {
 /** Photo with a scanline sweep and, once analysis lands, detected object boxes. */
 export function ScanAnimation({ imageUrl, scanning, objects = [] }: Props) {
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-2xl border-[3px] border-ink shadow-sticker">
+    <div className="relative aspect-video w-full overflow-hidden rounded-3xl bg-appleBg">
       <Image
         src={imageUrl}
         alt="Your photo being analyzed"
@@ -24,14 +24,14 @@ export function ScanAnimation({ imageUrl, scanning, objects = [] }: Props) {
       {scanning ? (
         <div
           aria-hidden
-          className="absolute inset-x-0 top-0 h-16 animate-scanline bg-gradient-to-b from-transparent via-screen/60 to-transparent"
+          className="absolute inset-x-0 top-0 h-16 animate-scanline bg-gradient-to-b from-transparent via-appleBlue/50 to-transparent"
         />
       ) : null}
 
       {objects.map((object) => (
         <div
           key={object.id}
-          className="absolute rounded border-2 border-screen bg-screen/10"
+          className="absolute rounded-md border-2 border-appleBlue bg-appleBlue/10"
           style={{
             left: `${object.bounds.x * 100}%`,
             top: `${object.bounds.y * 100}%`,
@@ -39,7 +39,10 @@ export function ScanAnimation({ imageUrl, scanning, objects = [] }: Props) {
             height: `${object.bounds.height * 100}%`,
           }}
         >
-          <span className="absolute -top-5 left-0 rounded bg-ink/80 px-1 font-mono text-[10px] text-screen">
+          <span
+            className="absolute -top-5 left-0 rounded-full bg-appleInk/85 px-2 py-0.5 font-inter text-[10px] font-medium text-white"
+            style={{ letterSpacing: "-0.01em" }}
+          >
             {object.label}
           </span>
         </div>

@@ -13,7 +13,7 @@ const ITEMS = [
 
 // Routes that render a light/white background instead of the dark video bg,
 // so the pill needs an inverted, dark-on-light color scheme to stay legible.
-const LIGHT_BG_ROUTES = ["/", "/playground"];
+const LIGHT_BG_ROUTES = ["/", "/playground", "/stats", "/create"];
 
 function HomeIcon({ className }: { className?: string }) {
   return (

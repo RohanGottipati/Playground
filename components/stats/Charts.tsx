@@ -13,13 +13,47 @@ export function MetricCard({
   hint?: string;
 }) {
   return (
-    <div className="rounded-2xl border-[3px] border-ink bg-cabinet p-4 shadow-sticker">
-      <p className="font-mono text-[11px] uppercase tracking-wide text-paper/60">
+    <div className="rounded-2xl bg-appleBg p-4">
+      <p
+        className="font-inter text-xs font-medium uppercase tracking-wide text-appleGray"
+        style={{ letterSpacing: "0.02em" }}
+      >
         {label}
       </p>
-      <p className="marquee-title text-2xl text-token">{value}</p>
-      {hint ? <p className="font-mono text-[11px] text-paper/50">{hint}</p> : null}
+      <p
+        className="mt-1 font-inter font-medium text-appleInk"
+        style={{ fontSize: 26, letterSpacing: "-0.03em" }}
+      >
+        {value}
+      </p>
+      {hint ? (
+        <p className="mt-0.5 font-inter text-xs text-appleGray" style={{ letterSpacing: "-0.01em" }}>
+          {hint}
+        </p>
+      ) : null}
     </div>
+  );
+}
+
+function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-3xl bg-appleBg p-5">
+      <h3
+        className="mb-3 font-inter font-medium text-appleInk"
+        style={{ fontSize: 16, letterSpacing: "-0.02em" }}
+      >
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+function EmptyNote({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="font-inter text-xs text-appleGray" style={{ letterSpacing: "-0.01em" }}>
+      {children}
+    </p>
   );
 }
 
@@ -34,21 +68,23 @@ export function BarChart({
 }) {
   const max = Math.max(1, ...data.map((row) => row.count));
   return (
-    <div className="panel">
-      <h3 className="marquee-title mb-3 text-base text-token">{title}</h3>
+    <ChartCard title={title}>
       {data.length === 0 ? (
-        <p className="font-mono text-xs text-paper/60">{emptyMessage}</p>
+        <EmptyNote>{emptyMessage}</EmptyNote>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {data.map((row) => (
-            <li key={row.label} className="font-mono text-[11px] uppercase">
-              <div className="flex justify-between text-paper/70">
-                <span className="truncate">{row.label}</span>
-                <span>{row.count}</span>
+            <li key={row.label}>
+              <div
+                className="mb-1 flex justify-between font-inter text-xs text-appleGray"
+                style={{ letterSpacing: "-0.01em" }}
+              >
+                <span className="truncate capitalize">{row.label}</span>
+                <span className="font-medium text-appleInk">{row.count}</span>
               </div>
-              <div className="h-3 w-full rounded border-2 border-ink bg-ink/60">
+              <div className="h-2 w-full rounded-full bg-white">
                 <div
-                  className="h-full rounded-sm bg-screen"
+                  className="h-full rounded-full bg-appleInk"
                   style={{ width: `${(row.count / max) * 100}%` }}
                 />
               </div>
@@ -56,7 +92,7 @@ export function BarChart({
           ))}
         </ul>
       )}
-    </div>
+    </ChartCard>
   );
 }
 
@@ -81,10 +117,9 @@ export function LineChart({
     .join(" ");
 
   return (
-    <div className="panel">
-      <h3 className="marquee-title mb-3 text-base text-token">{title}</h3>
+    <ChartCard title={title}>
       {data.length === 0 ? (
-        <p className="font-mono text-xs text-paper/60">{emptyMessage}</p>
+        <EmptyNote>{emptyMessage}</EmptyNote>
       ) : (
         <svg
           viewBox={`0 0 ${width} ${height}`}
@@ -95,13 +130,14 @@ export function LineChart({
           <polyline
             points={points}
             fill="none"
-            stroke="#7ce7c8"
-            strokeWidth={3}
+            stroke="#0068c9"
+            strokeWidth={2.5}
+            strokeLinecap="round"
             strokeLinejoin="round"
           />
         </svg>
       )}
-    </div>
+    </ChartCard>
   );
 }
 
@@ -119,10 +155,9 @@ export function ScatterChart({
   const played = data.filter((row) => row.plays > 0);
 
   return (
-    <div className="panel">
-      <h3 className="marquee-title mb-3 text-base text-token">{title}</h3>
+    <ChartCard title={title}>
       {played.length === 0 ? (
-        <p className="font-mono text-xs text-paper/60">{emptyMessage}</p>
+        <EmptyNote>{emptyMessage}</EmptyNote>
       ) : (
         <svg
           viewBox={`0 0 ${width} ${height}`}
@@ -136,8 +171,8 @@ export function ScatterChart({
               cx={((row.difficulty - 1) / 4) * (width - 24) + 12}
               cy={height - row.completionRate * (height - 24) - 12}
               r={5}
-              fill="#ffcf5c"
-              stroke="#14110f"
+              fill="#0068c9"
+              stroke="#ffffff"
               strokeWidth={2}
             >
               <title>{`${row.title}: difficulty ${row.difficulty}, ${formatPercent(row.completionRate)} completion`}</title>
@@ -145,10 +180,13 @@ export function ScatterChart({
           ))}
         </svg>
       )}
-      <p className="mt-2 font-mono text-[10px] uppercase text-paper/50">
+      <p
+        className="mt-2 font-inter text-[11px] text-appleGray"
+        style={{ letterSpacing: "-0.01em" }}
+      >
         x: difficulty 1–5 · y: completion rate
       </p>
-    </div>
+    </ChartCard>
   );
 }
 
@@ -158,21 +196,25 @@ export function ActivityFeed({
   items: StatsSnapshot["recentActivity"];
 }) {
   return (
-    <div className="panel">
-      <h3 className="marquee-title mb-3 text-base text-token">Live activity</h3>
+    <ChartCard title="Live activity">
       {items.length === 0 ? (
-        <p className="font-mono text-xs text-paper/60">
-          Nothing yet. Published games and plays show up here.
-        </p>
+        <EmptyNote>Nothing yet. Published games and plays show up here.</EmptyNote>
       ) : (
-        <ul className="space-y-1 font-mono text-[11px] text-paper/70">
+        <ul className="divide-y divide-white">
           {items.map((item, index) => (
-            <li key={`${item.createdAt}-${index}`}>
-              {item.type.replace(/_/g, " ")} {item.label ? `· ${item.label}` : ""}
+            <li
+              key={`${item.createdAt}-${index}`}
+              className="py-1.5 font-inter text-xs text-appleGray first:pt-0 last:pb-0"
+              style={{ letterSpacing: "-0.01em" }}
+            >
+              <span className="capitalize text-appleInk">
+                {item.type.replace(/_/g, " ")}
+              </span>
+              {item.label ? ` · ${item.label}` : ""}
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </ChartCard>
   );
 }
