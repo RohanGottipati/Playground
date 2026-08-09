@@ -13,8 +13,11 @@ export function selectGameMode(
   objects: NormalizedObject[],
   hints: GenerationHints,
 ): GameMode {
+  // The template pipeline drives gauntlet games directly; the seeded mode
+  // picker only chooses among the self-contained legacy modes.
+  const selectable = GAME_MODES.filter((mode) => mode !== "gauntlet");
   const weights = new Map<GameMode, number>(
-    GAME_MODES.map((mode) => [mode, 1]),
+    selectable.map((mode) => [mode, 1]),
   );
 
   // Object affinity: round/small things beg to be thrown, many trinkets make

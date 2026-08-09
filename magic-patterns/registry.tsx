@@ -1,8 +1,13 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { coreEntries } from "./data/coreCatalog";
 import { objectEntries } from "./data/objectCatalog";
 
-const entriesById = new Map(
-  objectEntries.map((entry) => [entry.id, entry] as const),
+/**
+ * Lookup and addressing for the bundled sprite components. Rendering them to
+ * markup needs react-dom/server, which Next forbids in the client bundle, so
+ * that lives in ./render — imported only by server code, scripts and tests.
+ */
+export const entriesById = new Map(
+  [...objectEntries, ...coreEntries].map((entry) => [entry.id, entry] as const),
 );
 
 /** Stable IDs for every everyday-object component supplied by Magic Patterns. */
@@ -21,36 +26,11 @@ export function hasMagicPatternComponent(
   return Boolean(componentId && entriesById.has(componentId));
 }
 
-/** Renders the real React/SVG component shipped in the Magic Patterns bundle. */
-export function renderMagicPatternSvg(
-  componentId: string | undefined,
-): string | undefined {
-  if (!componentId) return undefined;
-  const entry = entriesById.get(componentId);
-  if (!entry) return undefined;
-
-  const markup = renderToStaticMarkup(entry.render());
-  return markup.startsWith("<svg ") && !markup.includes("xmlns=")
-    ? markup.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ')
-    : markup;
-}
-
 /**
- * Phaser's loader treats every `data:` URL as base64 (File#base64) and decodes
- * it with `atob`, so SVG data URIs must be base64-encoded, not URL-encoded.
+ * Path to this component's pre-rendered SVG (see scripts/generate-sprites).
+ * Phaser and <img> both load it directly, so the browser never has to render
+ * React to markup and the art stays cacheable.
  */
-function svgToBase64(svg: string): string {
-  const bytes = new TextEncoder().encode(svg);
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
-
-export function magicPatternSvgDataUri(
-  componentId: string | undefined,
-): string | undefined {
-  const svg = renderMagicPatternSvg(componentId);
-  return svg ? `data:image/svg+xml;base64,${svgToBase64(svg)}` : undefined;
+export function magicPatternSpriteUrl(componentId: string): string {
+  return `/sprites/${componentId}.svg`;
 }

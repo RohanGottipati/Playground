@@ -12,7 +12,13 @@ export type MechanicType =
  * Every generated level plays one of these modes. Selection is seeded per run
  * so the same photo produces different games on different attempts.
  */
-export const GAME_MODES = ["classic", "shooter", "skyfall", "rush"] as const;
+export const GAME_MODES = [
+  "classic",
+  "shooter",
+  "skyfall",
+  "rush",
+  "gauntlet",
+] as const;
 export type GameMode = (typeof GAME_MODES)[number];
 
 /** Human-readable, mode-specific instructions shown in the pre-game popup. */
@@ -44,15 +50,49 @@ export type SkyfallSpec = {
   maxConcurrent: number;
   /** Catalog components cycled for the falling sprites. */
   componentIds: string[];
+  /**
+   * Survive-the-storm win condition: stay alive this long to win. Absent on
+   * legacy skyfall specs, which win at the exit door instead.
+   */
+  surviveSeconds?: number;
+  /**
+   * Dodge-the-storm win condition: the run is won once this many falling
+   * objects have smashed harmlessly while the player is out in the storm.
+   * Takes precedence over surviveSeconds when both are present.
+   */
+  dodgeCount?: number;
+};
+
+/**
+ * Gauntlet mode: a machine at the far right hurls projectiles at the player,
+ * who must cross the whole course and reach the finish marker beside it.
+ */
+export type GauntletSpec = {
+  /** Milliseconds between turret volleys. */
+  intervalMs: number;
+  /** Horizontal speed of turret projectiles, in px/s. */
+  projectileSpeed: number;
+  /** Generic display name for what the machine fires, e.g. "soda can". */
+  ammoLabel: string;
+  /** Catalog components cycled for the fired sprites. */
+  ammoComponentIds: string[];
+  /** Entity id of the hazard that visually anchors the firing machine. */
+  turretId: string;
 };
 
 export type ShooterSpec = {
-  /** Targets that must be destroyed before the goal unlocks. */
+  /**
+   * Targets that must all be destroyed. New specs win the moment the last one
+   * falls; legacy specs (which carry a goal entity) unlock a door instead.
+   */
   requiredKills: number;
 };
 
 export type RushSpec = {
-  /** Collectibles that must all be gathered before the goal unlocks. */
+  /**
+   * Collectibles that must all be gathered. New specs win on the final pickup;
+   * legacy specs (which carry a goal entity) unlock a door instead.
+   */
   requiredCollectibles: number;
   /** Soft time pressure; running out restarts the run, never bricks it. */
   timeLimitSeconds: number;
@@ -140,6 +180,12 @@ export type GameSpec = {
   difficulty: 1 | 2 | 3 | 4 | 5;
   /** Absent on legacy games, which play as "classic". */
   mode?: GameMode;
+  /**
+   * Hand-built template this level was cut from. Stored so the next
+   * generation can refuse to hand back a layout the player just played.
+   * Absent on legacy games built before the template pipeline.
+   */
+  templateId?: string;
   /** Seed used for this run's mode, layout accents and titles. */
   seed?: number;
   /** Mode-specific popup rules; legacy games get a fallback at runtime. */
@@ -148,6 +194,7 @@ export type GameSpec = {
   skyfall?: SkyfallSpec;
   shooter?: ShooterSpec;
   rush?: RushSpec;
+  gauntlet?: GauntletSpec;
   magicPatterns?: MagicPatternsInfo;
   world: {
     width: number;
@@ -168,6 +215,11 @@ export type GameSpec = {
     repaired: boolean;
     repairActions: string[];
     estimatedOptimalTimeSeconds: number;
+    /**
+     * Generator pipeline revision. Absent on legacy specs; >= 2 opts into the
+     * strict completability checks in runtimeSafety.
+     */
+    pipelineVersion?: number;
   };
   source: {
     imageUrl: string;

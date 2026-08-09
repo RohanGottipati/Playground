@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { modeMeta, tierFor } from "./difficulty";
 
 export function Badge({
   children,
@@ -23,28 +24,57 @@ export function Badge({
   );
 }
 
-const MODE_LABELS: Record<string, { label: string; icon: string; tone: "paper" | "marquee" | "token" | "screen" }> = {
-  classic: { label: "Platformer", icon: "🕹", tone: "paper" },
-  shooter: { label: "Shooter", icon: "🎯", tone: "marquee" },
-  skyfall: { label: "Skyfall", icon: "☄", tone: "screen" },
-  rush: { label: "Rush", icon: "⏳", tone: "token" },
-};
-
 export function ModeBadge({ mode }: { mode: string }) {
-  const entry = MODE_LABELS[mode] ?? MODE_LABELS.classic;
+  const meta = modeMeta(mode);
   return (
-    <Badge tone={entry.tone}>
-      <span aria-hidden>{entry.icon}</span> {entry.label}
-    </Badge>
+    <span
+      className={`inline-flex items-center gap-1 rounded-md border-2 border-ink px-2 py-[3px] font-mono text-[11px] uppercase tracking-wide shadow-stickerSm ${meta.chip}`}
+    >
+      <span aria-hidden>{meta.icon}</span> {meta.label}
+    </span>
   );
 }
 
-export function DifficultyBadge({ difficulty }: { difficulty: number }) {
-  const labels = ["Gentle", "Easy", "Tricky", "Hard", "Brutal"];
-  const label = labels[Math.min(4, Math.max(0, difficulty - 1))];
+/**
+ * A five-notch meter rather than a word: the filled bars make the campaign's
+ * ramp legible at a glance while scrolling the arcade.
+ */
+export function DifficultyBadge({
+  difficulty,
+  size = "sm",
+}: {
+  difficulty: number;
+  size?: "sm" | "lg";
+}) {
+  const tier = tierFor(difficulty);
+  const large = size === "lg";
+
   return (
-    <Badge tone={difficulty >= 4 ? "marquee" : "token"}>
-      {"★".repeat(difficulty)} {label}
-    </Badge>
+    <span
+      className={`inline-flex items-center gap-2 rounded-md border-2 border-ink bg-ink/80 shadow-stickerSm ${
+        large ? "px-3 py-1.5" : "px-2 py-[4px]"
+      }`}
+      title={`Difficulty ${tier.level} of 5 — ${tier.label}`}
+    >
+      <span className="flex items-end gap-[2px]" aria-hidden>
+        {[1, 2, 3, 4, 5].map((notch) => (
+          <span
+            key={notch}
+            className={`${large ? "w-[5px]" : "w-[3px]"} rounded-[1px] ${
+              notch <= tier.level ? tier.bg : "bg-paper/20"
+            }`}
+            style={{ height: (large ? 6 : 4) + notch * (large ? 3 : 2) }}
+          />
+        ))}
+      </span>
+      <span
+        className={`font-mono uppercase tracking-wide ${tier.text} ${
+          large ? "text-xs" : "text-[10px]"
+        }`}
+      >
+        {tier.label}
+      </span>
+      <span className="sr-only">Difficulty {tier.level} of 5</span>
+    </span>
   );
 }

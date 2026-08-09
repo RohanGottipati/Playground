@@ -6,7 +6,13 @@ import type { GameSpec } from "@/game/types";
 import { isEntityVisualKind } from "@/game/art/selectVisual";
 import { isSelectableEntityComponent } from "@/game/components/selectComponent";
 import { AppError } from "@/lib/errors/AppError";
-import { isStandable } from "./validateReachability";
+import { hasSafeLanding, isCollectibleReachable } from "./routeSafety";
+import {
+  computeReachability,
+  GROUND_NODE_ID,
+  isStandable,
+} from "./validateReachability";
+import { winConditionFor } from "./winCondition";
 
 export type SafetyIssue = string;
 
@@ -19,8 +25,14 @@ export function collectSafetyIssues(spec: GameSpec): SafetyIssue[] {
     issues.push("level has no standable platform");
   }
 
+  // Legacy specs of every mode carry a door; new specs only do in classic —
+  // the other modes win through their own objective (winConditionFor).
   const goals = spec.entities.filter((entity) => entity.mechanic === "goal");
-  if (goals.length !== 1) issues.push(`expected exactly one goal, found ${goals.length}`);
+  if (goals.length > 1) {
+    issues.push(`expected at most one goal, found ${goals.length}`);
+  } else if (goals.length === 0 && winConditionFor(spec) === "door") {
+    issues.push("door win condition without a goal entity");
+  }
 
   const portals = spec.entities.filter((entity) => entity.mechanic === "portal");
   if (portals.length !== 0 && portals.length !== 2) {
@@ -67,13 +79,46 @@ export function collectSafetyIssues(spec: GameSpec): SafetyIssue[] {
     }
   }
   if (spec.skyfall) {
-    const { intervalMs, fallSpeed, maxConcurrent } = spec.skyfall;
+    const { intervalMs, fallSpeed, maxConcurrent, surviveSeconds, dodgeCount } =
+      spec.skyfall;
     if (intervalMs < 700) issues.push("skyfall interval is unfairly fast");
     if (fallSpeed <= 0 || fallSpeed > 420) {
       issues.push("skyfall speed is outside the dodgeable range");
     }
     if (maxConcurrent < 1 || maxConcurrent > 8) {
       issues.push("skyfall concurrency is outside the allowed range");
+    }
+    if (goals.length === 0) {
+      // Without a door, the survive timer or the dodge counter IS the win
+      // condition; at least one must be present and fair.
+      const dodgeOk =
+        Number.isFinite(dodgeCount) &&
+        (dodgeCount ?? 0) >= 5 &&
+        (dodgeCount ?? 0) <= 40;
+      const surviveOk =
+        Number.isFinite(surviveSeconds) &&
+        (surviveSeconds ?? 0) >= 15 &&
+        (surviveSeconds ?? 0) <= 90;
+      if (!dodgeOk && !surviveOk) {
+        issues.push("skyfall win condition is missing or outside the fair range");
+      }
+    }
+  }
+  if (spec.mode === "gauntlet" && !spec.gauntlet) {
+    issues.push("gauntlet mode requires a gauntlet configuration");
+  }
+  if (spec.gauntlet) {
+    const { intervalMs, projectileSpeed, turretId } = spec.gauntlet;
+    if (intervalMs < 900) issues.push("gauntlet volley interval is unfairly fast");
+    if (projectileSpeed <= 0 || projectileSpeed > 520) {
+      issues.push("gauntlet projectile speed is outside the dodgeable range");
+    }
+    const turret = spec.entities.find((entity) => entity.id === turretId);
+    if (!turret || turret.mechanic !== "hazard") {
+      issues.push("gauntlet turret entity is missing or not a hazard");
+    }
+    if (goals.length === 0) {
+      issues.push("gauntlet mode requires a finish goal to reach");
     }
   }
 
@@ -120,6 +165,62 @@ export function collectSafetyIssues(spec: GameSpec): SafetyIssue[] {
       !isSelectableEntityComponent(entity.visual.componentId, entity.mechanic)
     ) {
       issues.push(`${entity.id} has an incompatible component id`);
+    }
+  }
+
+  // Strict completability checks for pipeline-v2 specs. Legacy specs skip
+  // these so every already-published game keeps loading.
+  if ((spec.validation.pipelineVersion ?? 0) >= 2) {
+    if (!spec.validation.reachable) {
+      issues.push("level failed its own reachability validation");
+    }
+
+    const reachability = computeReachability(spec.entities);
+    const hazards = spec.entities.filter(
+      (entity) => entity.mechanic === "hazard",
+    );
+
+    const goal = goals[0];
+    if (goal) {
+      const supportId = String(goal.metadata?.supportId ?? GROUND_NODE_ID);
+      const support = reachability.nodes.find((node) => node.id === supportId);
+      if (!support || !reachability.reachable.has(supportId)) {
+        issues.push("goal sits on an unreachable platform");
+      } else if (!hasSafeLanding(support, hazards)) {
+        issues.push("goal platform has no hazard-free landing");
+      }
+    }
+
+    if (spec.rush) {
+      const stranded = spec.entities.filter(
+        (entity) =>
+          entity.mechanic === "collectible" &&
+          !isCollectibleReachable(entity, reachability),
+      );
+      if (stranded.length > 0) {
+        issues.push(
+          `${stranded.length} required collectible(s) are out of jump reach`,
+        );
+      }
+    }
+
+    if (spec.shooter) {
+      const unsupported = spec.entities.filter(
+        (entity) =>
+          entity.mechanic === "target" &&
+          !reachability.reachable.has(String(entity.metadata?.supportId ?? "")),
+      );
+      if (unsupported.length > 0) {
+        issues.push(`${unsupported.length} target(s) hover over unreachable ground`);
+      }
+    }
+
+    for (const node of reachability.nodes) {
+      if (node.mechanic === "ground") continue;
+      if (!reachability.reachable.has(node.id)) continue;
+      if (!hasSafeLanding(node, hazards)) {
+        issues.push(`route platform ${node.id} has no hazard-free landing`);
+      }
     }
   }
 

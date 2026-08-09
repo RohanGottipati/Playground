@@ -144,10 +144,19 @@ export function computeReachability(
 /** Farthest reachable node, preferring distance to the right then height. */
 export function farthestReachableNode(
   result: ReachabilityResult,
+  options?: { excludeMoving?: boolean },
 ): PlatformNode | undefined {
-  const reachableNodes = result.nodes.filter((node) =>
+  let reachableNodes = result.nodes.filter((node) =>
     result.reachable.has(node.id),
   );
+  if (options?.excludeMoving) {
+    // A goal pinned to a moving platform floats away from it for most of the
+    // oscillation, so prefer a static anchor whenever one is reachable.
+    const staticNodes = reachableNodes.filter(
+      (node) => node.mechanic !== "moving_platform",
+    );
+    if (staticNodes.length > 0) reachableNodes = staticNodes;
+  }
   if (reachableNodes.length === 0) return undefined;
   return reachableNodes.reduce((best, node) => {
     const bestScore = best.right * 1.0 + (GROUND_TOP - best.top) * 0.8;

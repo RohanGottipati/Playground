@@ -10,6 +10,10 @@ export type HudState = {
   totalTargets?: number;
   /** Countdown for rush mode, in milliseconds. */
   timeLeftMs?: number;
+  /** Falling objects dodged so far; only present in dodge-storm games. */
+  avoided?: number;
+  /** Dodges needed to win; only present in dodge-storm games. */
+  dodgeTarget?: number;
   /** True while the exit door is still locked by the mode objective. */
   goalLocked?: boolean;
 };
@@ -36,6 +40,10 @@ type AnyHandler = (payload: never) => void;
 /** Minimal typed emitter so Phaser never writes into React state directly. */
 export class GameBus {
   private handlers = new Map<keyof BusEvents, Set<AnyHandler>>();
+  private startupState:
+    | { type: "ready"; payload: undefined }
+    | { type: "error"; payload: BusEvents["error"] }
+    | undefined;
 
   on<K extends keyof BusEvents>(type: K, handler: Handler<K>): () => void {
     let set = this.handlers.get(type);
@@ -44,10 +52,23 @@ export class GameBus {
       this.handlers.set(type, set);
     }
     set.add(handler as AnyHandler);
+    // Phaser can finish booting before React receives the handle. Replaying
+    // this one startup event makes readiness and loader failures race-free.
+    if (this.startupState?.type === type) {
+      handler(this.startupState.payload as BusEvents[K]);
+    }
     return () => set?.delete(handler as AnyHandler);
   }
 
   emit<K extends keyof BusEvents>(type: K, payload: BusEvents[K]): void {
+    if (type === "ready") {
+      this.startupState = { type: "ready", payload: undefined };
+    } else if (type === "error") {
+      this.startupState = {
+        type: "error",
+        payload: payload as BusEvents["error"],
+      };
+    }
     for (const handler of this.handlers.get(type) ?? []) {
       (handler as (value: BusEvents[K]) => void)(payload);
     }
@@ -55,6 +76,7 @@ export class GameBus {
 
   clear(): void {
     this.handlers.clear();
+    this.startupState = undefined;
   }
 }
 

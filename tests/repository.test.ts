@@ -1,7 +1,8 @@
 import { randomUUID } from "crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { generateLevel } from "@/game/generation/generateLevel";
-import { MemoryRepository, resetMemoryState } from "@/lib/db/memory";
+import { MemoryRepository, resetMemoryState, sortSummaries } from "@/lib/db/memory";
+import type { GameSummary } from "@/lib/db/types";
 import { slugifyTitle, generateUniqueSlug } from "@/lib/utils/slug";
 import { discoveryForObject } from "@/lib/discovery/mechanicDiscovery";
 import { deskScene } from "./fixtures/scenes";
@@ -103,6 +104,67 @@ describe("MemoryRepository", () => {
     ]);
     expect(first).toHaveLength(1);
     expect(second).toHaveLength(0);
+  });
+
+  it("returns recently stored template ids in generation hints", async () => {
+    const db = new MemoryRepository();
+    const record = await draft(db);
+    await db.saveDraftGame({
+      id: record.id,
+      title: record.title,
+      sourceImagePath: record.sourceImagePath,
+      sourceImageUrl: record.sourceImageUrl,
+      sceneAnalysis: record.sceneAnalysis,
+      gameSpec: { ...record.gameSpec, templateId: "pantry" },
+      generationLatencyMs: record.generationLatencyMs ?? 0,
+      generationAttemptCount: record.generationAttemptCount,
+      generationStatus: record.generationStatus,
+    });
+
+    expect((await db.getGenerationHints()).recentTemplates).toEqual([
+      "pantry",
+    ]);
+  });
+});
+
+describe("campaign sort", () => {
+  const summary = (
+    slug: string,
+    difficulty: number,
+    publishedAt: string,
+  ): GameSummary =>
+    ({ slug, difficulty, publishedAt } as GameSummary);
+
+  it("orders gentlest first so the arcade ramps up as it scrolls", () => {
+    const sorted = sortSummaries(
+      [
+        summary("brutal", 5, "2026-01-01"),
+        summary("gentle", 1, "2026-01-02"),
+        summary("tricky", 3, "2026-01-03"),
+      ],
+      "campaign",
+    );
+    expect(sorted.map((entry) => entry.slug)).toEqual([
+      "gentle",
+      "tricky",
+      "brutal",
+    ]);
+  });
+
+  it("breaks ties stably so reseeding never reshuffles the campaign", () => {
+    const sorted = sortSummaries(
+      [
+        summary("zebra", 2, "2026-01-01"),
+        summary("apple", 2, "2026-01-01"),
+        summary("early", 2, "2025-12-31"),
+      ],
+      "campaign",
+    );
+    expect(sorted.map((entry) => entry.slug)).toEqual([
+      "early",
+      "apple",
+      "zebra",
+    ]);
   });
 });
 

@@ -1,6 +1,10 @@
 import { AppError } from "@/lib/errors/AppError";
 import type { SceneAnalysis } from "@/lib/backboard/schemas";
 import type { GameSpec, MechanicType } from "@/game/types";
+import type {
+  ComponentCatalogEntry,
+  ComponentRuntimeScope,
+} from "@/game/components/types";
 import { EMPTY_HINTS, type GenerationHints } from "@/game/generation/hints";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeObjectLabel } from "@/lib/utils/sanitize";
@@ -132,6 +136,38 @@ function fail(operation: string, error: { message: string } | null): never {
   throw new AppError("DATABASE_ERROR", `${operation}: ${error?.message ?? "unknown"}`);
 }
 
+export type ComponentCatalogRow = {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  tags: string[];
+  aliases: string[];
+  runtime_scope: ComponentRuntimeScope;
+  mechanic: MechanicType | null;
+  renderer_key: string | null;
+  enabled: boolean;
+  metadata: Record<string, string | number | boolean>;
+};
+
+export function toComponentCatalogEntry(
+  row: ComponentCatalogRow,
+): ComponentCatalogEntry {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    description: row.description,
+    tags: row.tags,
+    aliases: row.aliases,
+    runtimeScope: row.runtime_scope,
+    mechanic: row.mechanic,
+    rendererKey: row.renderer_key,
+    enabled: row.enabled,
+    metadata: row.metadata,
+  };
+}
+
 export class SupabaseRepository implements Repository {
   readonly kind = "supabase" as const;
 
@@ -232,19 +268,61 @@ export class SupabaseRepository implements Repository {
     if (error) fail("unpublishGame", error);
   }
 
+  /**
+   * Fills in each game's mode when the deployed `game_summaries` view predates
+   * migration 0006 and has no `mode` column. Without this every card would
+   * claim to be a platformer.
+   */
+  private async backfillModes(
+    rows: SummaryRow[],
+    summaries: GameSummary[],
+  ): Promise<GameSummary[]> {
+    const missing = rows.some((row) => row.mode === undefined);
+    if (!missing || summaries.length === 0) return summaries;
+
+    const { data, error } = await this.client
+      .from("games")
+      .select("id, game_spec")
+      .in(
+        "id",
+        summaries.map((summary) => summary.id),
+      );
+    if (error || !data) return summaries;
+
+    const modeById = new Map(
+      (data as { id: string; game_spec: GameSpec | null }[]).map((row) => [
+        row.id,
+        row.game_spec?.mode ?? "classic",
+      ]),
+    );
+    return summaries.map((summary) => ({
+      ...summary,
+      mode: modeById.get(summary.id) ?? summary.mode,
+    }));
+  }
+
   async listGames(options: {
     sort: ArcadeSort;
     limit: number;
     offset: number;
   }): Promise<GameSummary[]> {
-    if (options.sort === "newest") {
-      const { data, error } = await this.client
-        .from("game_summaries")
-        .select("*")
-        .order("published_at", { ascending: false, nullsFirst: false })
-        .range(options.offset, options.offset + options.limit - 1);
+    if (options.sort === "newest" || options.sort === "campaign") {
+      const query = this.client.from("game_summaries").select("*");
+      const ordered =
+        options.sort === "campaign"
+          ? query
+              .order("difficulty", { ascending: true })
+              .order("published_at", { ascending: true, nullsFirst: false })
+              .order("slug", { ascending: true })
+          : query.order("published_at", { ascending: false, nullsFirst: false });
+
+      const { data, error } = await ordered.range(
+        options.offset,
+        options.offset + options.limit - 1,
+      );
       if (error) fail("listGames", error);
-      return (data as SummaryRow[]).map(toSummary);
+      const rows = data as SummaryRow[];
+      return this.backfillModes(rows, rows.map(toSummary));
     }
 
     const { data, error } = await this.client
@@ -253,11 +331,12 @@ export class SupabaseRepository implements Repository {
       .order("published_at", { ascending: false, nullsFirst: false })
       .limit(200);
     if (error) fail("listGames", error);
-    const summaries = (data as SummaryRow[]).map(toSummary);
-    return sortSummaries(summaries, options.sort).slice(
+    const rows = data as SummaryRow[];
+    const summaries = sortSummaries(rows.map(toSummary), options.sort).slice(
       options.offset,
       options.offset + options.limit,
     );
+    return this.backfillModes(rows, summaries);
   }
 
   async getGameSummary(gameId: string): Promise<GameSummary | undefined> {
@@ -570,6 +649,26 @@ export class SupabaseRepository implements Repository {
    * Learning-loop read. Tolerates a database that predates migration 0006:
    * any failure degrades to EMPTY_HINTS so generation never blocks on hints.
    */
+  async getEnabledComponentCatalog(): Promise<ComponentCatalogEntry[] | null> {
+    const { data, error } = await this.client
+      .from("component_catalog")
+      .select(
+        "id,name,category,description,tags,aliases,runtime_scope,mechanic,renderer_key,enabled,metadata",
+      )
+      .eq("enabled", true)
+      .order("category")
+      .order("name")
+      .limit(500);
+    if (error) {
+      // Never fail a generation over catalog trouble; bundled data covers it.
+      logDiagnostic("componentCatalog.fetchFailed", { message: error.message });
+      return null;
+    }
+    const rows = (data ?? []) as ComponentCatalogRow[];
+    if (rows.length === 0) return null;
+    return rows.map(toComponentCatalogEntry);
+  }
+
   async getGenerationHints(): Promise<GenerationHints> {
     try {
       const client = this.client;
@@ -581,7 +680,7 @@ export class SupabaseRepository implements Repository {
           .limit(12),
         client
           .from("games")
-          .select("id, mode:game_spec->>mode")
+          .select("id, mode:game_spec->>mode, template:game_spec->>templateId")
           .order("created_at", { ascending: false })
           .limit(300),
         client
@@ -596,12 +695,16 @@ export class SupabaseRepository implements Repository {
         : ((insights.data ?? []) as { mode: string; title: string }[]);
 
       const modeByGame = new Map<string, string>();
+      // Newest first, so this doubles as the template-repeat history.
+      const recentTemplates: string[] = [];
       if (!games.error) {
         for (const row of (games.data ?? []) as {
           id: string;
           mode: string | null;
+          template: string | null;
         }[]) {
           modeByGame.set(row.id, row.mode ?? "classic");
+          if (row.template) recentTemplates.push(row.template);
         }
       }
 
@@ -622,6 +725,7 @@ export class SupabaseRepository implements Repository {
 
       return {
         recentModes: recent.map((row) => row.mode),
+        recentTemplates,
         recentTitles: recent.map((row) => row.title),
         modeStats: [...stats.entries()].map(([mode, entry]) => ({
           mode,

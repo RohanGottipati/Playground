@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 
 export default async function ArcadePage() {
   const games = await repository().listGames({
-    sort: "newest",
-    limit: 12,
+    sort: "campaign",
+    limit: 24,
     offset: 0,
   });
 

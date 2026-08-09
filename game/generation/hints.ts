@@ -15,6 +15,12 @@ export type ModeStat = {
 export type GenerationHints = {
   /** Most recent first. Used to avoid generating the same mode twice in a row. */
   recentModes: string[];
+  /**
+   * Template ids of the most recently generated games, most recent first. The
+   * template picker bans these outright so back-to-back uploads never land on
+   * the same layout.
+   */
+  recentTemplates: string[];
   /** Most recent first. Used to avoid repeating titles. */
   recentTitles: string[];
   modeStats: ModeStat[];
@@ -22,6 +28,7 @@ export type GenerationHints = {
 
 export const EMPTY_HINTS: GenerationHints = {
   recentModes: [],
+  recentTemplates: [],
   recentTitles: [],
   modeStats: [],
 };

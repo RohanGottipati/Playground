@@ -14,7 +14,7 @@ import {
   WORLD_HEIGHT,
   WORLD_WIDTH,
 } from "@/game/constants";
-import type { GameEntitySpec, GameSpec, Rect } from "@/game/types";
+import type { GameEntitySpec, GameMode, GameSpec, Rect } from "@/game/types";
 import type { SceneAnalysis } from "@/lib/backboard/schemas";
 import { assignMechanics } from "./assignMechanics";
 import { calculateDifficulty } from "./difficulty";
@@ -23,6 +23,12 @@ import { applyGameMode, effectiveMode } from "./modes";
 import { clamp, normalizeObjects } from "./normalizeObjects";
 import { repairLevel } from "./repairLevel";
 import { createRng, hashSeed } from "./rng";
+import {
+  clearRouteHazards,
+  fixUnreachableCollectibles,
+  hasSafeLanding,
+  isCollectibleReachable,
+} from "./routeSafety";
 import { buildRules } from "./rules";
 import { selectGameMode } from "./selectMode";
 import { generateTitle } from "./title";
@@ -31,10 +37,17 @@ import {
   farthestReachableNode,
   GROUND_NODE_ID,
   isStandable,
+  toPlatformNode,
   type PlatformNode,
 } from "./validateReachability";
 import { assertSpecIsSafe } from "./runtimeSafety";
+import type { WinCondition } from "./winCondition";
 import { withResolvedVisual } from "@/game/art/selectVisual";
+import {
+  createComponentIndex,
+  defaultComponentIndex,
+} from "@/game/components/selectComponent";
+import type { ComponentCatalogEntry } from "@/game/components/types";
 
 export const SPAWN_X = 90;
 export const SPAWN_Y = GROUND_TOP - PLAYER_HEIGHT;
@@ -52,6 +65,14 @@ export type GenerateLevelOptions = {
   seed?: number;
   /** Learning signals from previous runs; absent means no adjustments. */
   hints?: GenerationHints;
+  /**
+   * Component rows fetched from the component_catalog table; absent falls
+   * back to the bundled catalog. Only affects which enabled components can be
+   * selected — the stored spec keeps its componentIds forever either way.
+   */
+  catalog?: readonly ComponentCatalogEntry[];
+  /** QA override: skip the seeded mode roll. Never set in production flows. */
+  forceMode?: GameMode;
 };
 
 function overlaps(a: Rect, b: Rect): boolean {
@@ -75,6 +96,9 @@ export function generateLevel(
   const seed = options.seed ?? hashSeed(options.imageUrl, analysis.titleSuggestion);
   const rng = createRng(seed);
   const hints = options.hints ?? EMPTY_HINTS;
+  const componentIndex = options.catalog
+    ? createComponentIndex(options.catalog)
+    : defaultComponentIndex;
 
   const objects = normalizeObjects(analysis);
   const repairActions: string[] = [];
@@ -89,11 +113,11 @@ export function generateLevel(
   entities = repair.entities;
   repairActions.push(...repair.actions);
 
+  // The reachability BFS is hazard-blind: clear lethal landings and stranded
+  // pickups before trusting its verdict.
+  entities = clearRouteHazards(entities, repairActions);
   const reachability = computeReachability(entities);
-  const goalNode = farthestReachableNode(reachability);
-  const goal = createGoal(goalNode);
-  entities = removeHazardsAround(entities, goal.bounds, repairActions);
-  entities = [...entities, goal];
+  entities = fixUnreachableCollectibles(seed, entities, reachability, repairActions);
 
   const unreachablePlatforms = entities.filter(
     (entity) => isStandable(entity) && !reachability.reachable.has(entity.id),
@@ -106,24 +130,48 @@ export function generateLevel(
 
   // Pick this run's game mode, then decorate the already-validated level.
   // Mode application only ever adds floating entities or configuration, so
-  // the verified route to the goal cannot break afterwards.
-  const requestedMode = selectGameMode(rng, objects, hints);
+  // the verified routes cannot break afterwards.
+  const requestedMode = options.forceMode ?? selectGameMode(rng, objects, hints);
   const pace = paceForMode(hints, requestedMode);
-  const finalReachability = computeReachability(entities);
   const application = applyGameMode(
     requestedMode,
     entities,
     objects,
     rng,
     pace,
-    finalReachability,
+    computeReachability(entities),
+    componentIndex,
   );
   entities = application.entities;
   repairActions.push(...application.actions);
   const mode = effectiveMode(requestedMode, application);
 
-  const difficultyReport = calculateDifficulty(entities, goal);
-  entities = entities.map(withResolvedVisual);
+  // Only classic runs end at an exit door; every other mode wins through its
+  // own objective. Shooter/rush degradations resolve to classic above, so a
+  // degraded run still gets its door here.
+  const finalReachability = computeReachability(entities);
+  const farNode = farthestReachableNode(finalReachability, {
+    excludeMoving: true,
+  });
+  let goal: GameEntitySpec | undefined;
+  if (mode === "classic") {
+    goal = createGoal(homeAnchoredNode(entities, farNode));
+    entities = removeHazardsAround(entities, goal.bounds, repairActions);
+    entities = [...entities, goal];
+  }
+
+  // Difficulty measures the trek to the far anchor even when no door spawns.
+  const difficultyAnchor = goal ?? createGoal(homeAnchoredNode(entities, farNode));
+  const difficultyReport = calculateDifficulty(entities, difficultyAnchor);
+  // Per-entity derived rng: picks stay deterministic for a stored seed while
+  // varying between runs, without perturbing the mode/title rng stream.
+  entities = entities.map((entity) =>
+    withResolvedVisual(
+      entity,
+      componentIndex,
+      createRng(hashSeed(String(seed), "visual", entity.id)),
+    ),
+  );
 
   const collectibleCount = entities.filter(
     (entity) => entity.mechanic === "collectible",
@@ -146,15 +194,27 @@ export function generateLevel(
         }
       : undefined;
 
+  const winCondition: WinCondition = goal
+    ? "door"
+    : mode === "shooter"
+      ? "destroy_all"
+      : mode === "rush"
+        ? "collect_all"
+        : mode === "skyfall"
+          ? "survive"
+          : "door";
+
   const objectLabels = objects.map((object) => object.label);
   const rules = buildRules({
     mode,
+    winCondition,
     objectLabels,
     collectibleCount,
     targetCount,
     ammoLabel: application.projectile?.label,
     skyfallLabel: application.skyfall?.label,
     rushTimeLimitSeconds: rush?.timeLimitSeconds,
+    surviveSeconds: application.skyfall?.surviveSeconds,
   });
 
   const title =
@@ -192,10 +252,11 @@ export function generateLevel(
     },
     entities,
     validation: {
-      reachable: true,
+      reachable: computeSpecReachable(mode, entities, goal),
       repaired: repairActions.length > 0,
       repairActions,
       estimatedOptimalTimeSeconds: difficultyReport.estimatedOptimalTimeSeconds,
+      pipelineVersion: 2,
     },
     source: {
       imageUrl: options.imageUrl,
@@ -395,6 +456,63 @@ function removeHazardsAround(
     );
     return false;
   });
+}
+
+/**
+ * A y-moving platform's node top is its travel apex, so anything pinned there
+ * floats above the platform most of the time. Anchor to the home bounds when
+ * the fallback anchor is a moving platform.
+ */
+function homeAnchoredNode(
+  entities: GameEntitySpec[],
+  node: PlatformNode | undefined,
+): PlatformNode | undefined {
+  if (!node || node.mechanic !== "moving_platform") return node;
+  const entity = entities.find((candidate) => candidate.id === node.id);
+  if (!entity) return node;
+  return toPlatformNode({ ...entity, movement: undefined });
+}
+
+/**
+ * Genuine completability verdict for the finished level. Replaces a literal
+ * `true` that shipped unreachable levels; assertSpecIsSafe enforces it for
+ * pipeline-v2 specs.
+ */
+function computeSpecReachable(
+  mode: GameMode,
+  entities: GameEntitySpec[],
+  goal: GameEntitySpec | undefined,
+): boolean {
+  const reachability = computeReachability(entities);
+  const hazards = entities.filter((entity) => entity.mechanic === "hazard");
+
+  if (mode === "classic" && !goal) return false;
+  if (goal) {
+    const supportId = String(goal.metadata?.supportId ?? GROUND_NODE_ID);
+    const support = reachability.nodes.find((node) => node.id === supportId);
+    if (!support || !reachability.reachable.has(support.id)) return false;
+    if (!hasSafeLanding(support, hazards)) return false;
+  }
+
+  if (mode === "rush") {
+    const stranded = entities
+      .filter((entity) => entity.mechanic === "collectible")
+      .some((entity) => !isCollectibleReachable(entity, reachability));
+    if (stranded) return false;
+  }
+
+  if (mode === "shooter") {
+    const targets = entities.filter((entity) => entity.mechanic === "target");
+    if (targets.length === 0) return false;
+    const unsupported = targets.some(
+      (target) =>
+        !reachability.reachable.has(String(target.metadata?.supportId ?? "")),
+    );
+    if (unsupported) return false;
+  }
+
+  if (mode === "skyfall" && reachability.reachable.size === 0) return false;
+  return true;
 }
 
 function createGoal(node: PlatformNode | undefined): GameEntitySpec {

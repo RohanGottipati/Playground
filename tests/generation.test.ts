@@ -155,7 +155,7 @@ describe("generateLevel", () => {
     expect(JSON.stringify(second)).toEqual(JSON.stringify(first));
   });
 
-  it("produces a safe, reachable, goal-bearing spec", () => {
+  it("produces a safe, reachable spec with resolved visuals", () => {
     const spec = generateLevel(deskScene, { imageUrl: "https://example.test/a.jpg" });
     expect(isSpecSafe(spec)).toBe(true);
     expect(spec.visualVersion).toBe(1);
@@ -173,7 +173,11 @@ describe("generateLevel", () => {
       "stat-eraser",
     ]);
     expect(spec.validation.reachable).toBe(true);
-    expect(spec.entities.filter((entity) => entity.mechanic === "goal")).toHaveLength(1);
+    expect(spec.validation.pipelineVersion).toBe(2);
+    // The exit door only exists in classic mode now.
+    expect(
+      spec.entities.filter((entity) => entity.mechanic === "goal"),
+    ).toHaveLength(spec.mode === "classic" ? 1 : 0);
   });
 
   it("survives a degenerate, cluttered scene", () => {
@@ -278,10 +282,16 @@ describe("generateLevel", () => {
 describe("calculateDifficulty", () => {
   it("returns a rating between 1 and 5", () => {
     const spec = generateLevel(deskScene, { imageUrl: "https://example.test/a.jpg" });
-    const goal = spec.entities.find((entity) => entity.mechanic === "goal");
-    expect(goal).toBeDefined();
-    if (!goal) return;
-    const report = calculateDifficulty(spec.entities, goal);
+    // Non-classic specs carry no goal entity, so measure to a far anchor.
+    const anchor: GameEntitySpec = spec.entities.find(
+      (entity) => entity.mechanic === "goal",
+    ) ?? {
+      id: "anchor",
+      mechanic: "goal",
+      bounds: { x: 1480, y: 700, width: 56, height: 80 },
+      metadata: { supportId: "ground" },
+    };
+    const report = calculateDifficulty(spec.entities, anchor);
     expect(report.difficulty).toBeGreaterThanOrEqual(1);
     expect(report.difficulty).toBeLessThanOrEqual(5);
   });

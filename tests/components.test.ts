@@ -5,12 +5,17 @@ import {
   getComponentById,
   queryComponentCatalog,
 } from "@/game/components/catalog";
-import { selectComponentForEntity } from "@/game/components/selectComponent";
 import {
-  MAGIC_PATTERN_COMPONENT_IDS,
+  createComponentIndex,
+  selectComponentForEntity,
+} from "@/game/components/selectComponent";
+import { createRng } from "@/game/generation/rng";
+import type { ComponentCatalogEntry } from "@/game/components/types";
+import { MAGIC_PATTERN_COMPONENT_IDS } from "@/magic-patterns/registry";
+import {
   magicPatternSvgDataUri,
   renderMagicPatternSvg,
-} from "@/magic-patterns/registry";
+} from "@/magic-patterns/render";
 import type {
   EntityVisualKind,
   GameEntitySpec,
@@ -137,5 +142,92 @@ describe("database component selection", () => {
     expect(
       selectComponentForEntity(entity("eraser", "collectible"), "eraser").id,
     ).toBe("stat-eraser");
+  });
+});
+
+describe("createComponentIndex", () => {
+  const SHARED_ALIAS_IDS = ["fur-sofa", "kit-kettle", "food-donut"];
+
+  it("honors database enabled flags with a graceful fallback pick", () => {
+    const withoutDonut = COMPONENT_CATALOG.map((row) =>
+      row.id === "food-donut" ? { ...row, enabled: false } : row,
+    );
+    const index = createComponentIndex(withoutDonut);
+    expect(index.isSelectableEntityComponent("food-donut", "collectible")).toBe(
+      false,
+    );
+    expect(
+      index.selectComponentForEntity(entity("donut", "collectible"), "gem").id,
+    ).not.toBe("food-donut");
+  });
+
+  it("drops database rows that have no bundled renderer", () => {
+    const foreignRow: ComponentCatalogEntry = {
+      id: "db-only-widget",
+      name: "Widget",
+      category: "toys",
+      description: "exists only in the database",
+      tags: [],
+      aliases: ["widget"],
+      runtimeScope: "entity",
+      mechanic: "collectible",
+      rendererKey: "object.db-only-widget",
+      enabled: true,
+      metadata: { componentType: "object-sprite" },
+    };
+    const index = createComponentIndex([...COMPONENT_CATALOG, foreignRow]);
+    expect(
+      index.isSelectableEntityComponent("db-only-widget", "collectible"),
+    ).toBe(false);
+  });
+
+  it("varies seeded picks among equally good matches but stays deterministic", () => {
+    const shared = COMPONENT_CATALOG.map((row) =>
+      SHARED_ALIAS_IDS.includes(row.id)
+        ? { ...row, aliases: [...row.aliases, "test widget"] }
+        : row,
+    );
+    const index = createComponentIndex(shared);
+
+    const picks = new Set(
+      Array.from(
+        { length: 24 },
+        (_, i) =>
+          index.selectComponentForEntity(
+            entity("test widget", "collectible"),
+            "gem",
+            createRng(i + 1),
+          ).id,
+      ),
+    );
+    expect(picks.size).toBeGreaterThan(1);
+    for (const pick of picks) {
+      expect(SHARED_ALIAS_IDS).toContain(pick);
+    }
+
+    const fixedSeed = index.selectComponentForEntity(
+      entity("test widget", "collectible"),
+      "gem",
+      createRng(7),
+    ).id;
+    expect(
+      index.selectComponentForEntity(
+        entity("test widget", "collectible"),
+        "gem",
+        createRng(7),
+      ).id,
+    ).toBe(fixedSeed);
+  });
+
+  it("keeps first-match behavior when no rng is provided", () => {
+    const index = createComponentIndex(COMPONENT_CATALOG);
+    for (const [label, mechanic, kind] of [
+      ["sofa", "static_platform", "book-platform"],
+      ["donut", "collectible", "gem"],
+    ] as const) {
+      expect(index.selectComponentForEntity(entity(label, mechanic), kind).id).toBe(
+        selectComponentForEntity(entity(label, mechanic), kind).id,
+      );
+    }
   });
 });

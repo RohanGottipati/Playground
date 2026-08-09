@@ -37,6 +37,14 @@ const PATTERNS: Record<GameMode, string[]> = {
     "The Great {Object} Heist",
     "{Object} Dash",
   ],
+  gauntlet: [
+    "The {Object} Gauntlet",
+    "{Object} Barrage",
+    "Run the {Object} Line",
+    "{Object} Crossfire",
+    "Past the {Object}",
+    "{Object} Salvo",
+  ],
 };
 
 function titleCase(value: string): string {

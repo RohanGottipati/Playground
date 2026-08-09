@@ -75,7 +75,9 @@ const CORE_GROUPS = {
     ["enemy-crab", "Crab enemy"],
     ["enemy-ghost", "Ghost enemy"],
     ["enemy-robot", "Robot enemy"],
-    ["enemy-turret", "Turret enemy"],
+    // Unique rendererKey keeps the turret out of the generic hazard pool:
+    // it is only ever chosen explicitly (gauntlet machine fallback).
+    ["enemy-turret", "Turret enemy", "entity", "hazard", "turret-cannon", ["turret", "runtime"]],
     ["enemy-mushroom", "Mushroom enemy"],
     ["enemy-snake", "Snake enemy"],
     ["enemy-fish", "Fish enemy"],
@@ -167,7 +169,7 @@ const CORE_GROUPS = {
     ["decor-confetti", "Confetti"],
     ["decor-neon-star", "Neon star"],
     ["decor-particle-spark", "Spark particle"],
-    ["decor-finish-flag", "Finish flag"],
+    ["decor-finish-flag", "Finish flag", "entity", "goal", "exit-door", ["goal", "runtime"]],
   ],
   hud: [
     ["hud-game", "Game HUD", "ui", null, "GameHUD", ["runtime"]],
