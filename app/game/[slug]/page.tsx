@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GamePageClient } from "@/components/game/GamePageClient";
 import { LeaderboardPanel } from "@/components/game/LeaderboardPanel";
-import { DifficultyBadge, ModeBadge } from "@/components/ui/Badge";
 import { modeMeta, tierFor } from "@/components/ui/difficulty";
 import { spriteUrl } from "@/components/ui/spriteUrl";
 import { ShareButton } from "@/components/ui/ShareButton";
@@ -59,8 +58,11 @@ function ObjectsPanel({ spec }: { spec: GameSpec }) {
   if (props.size === 0) return null;
 
   return (
-    <div className="panel">
-      <h2 className="marquee-title mb-3 text-lg text-token">
+    <div className="rounded-2xl bg-appleBg p-5">
+      <h2
+        className="mb-3 font-inter font-medium text-appleInk"
+        style={{ fontSize: 15, letterSpacing: "-0.02em" }}
+      >
         Objects in this level
       </h2>
       <ul className="grid grid-cols-2 gap-2">
@@ -69,9 +71,9 @@ function ObjectsPanel({ spec }: { spec: GameSpec }) {
           return (
             <li
               key={key}
-              className="flex items-center gap-2 rounded-lg border border-paper/10 bg-ink/50 px-2 py-1.5"
+              className="flex items-center gap-2 rounded-xl bg-white px-2 py-1.5"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-paper/10">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-appleBg">
                 {art ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -83,10 +85,13 @@ function ObjectsPanel({ spec }: { spec: GameSpec }) {
                 ) : null}
               </span>
               <span className="min-w-0">
-                <span className="block truncate font-mono text-[11px] text-paper/90">
+                <span
+                  className="block truncate font-inter font-medium text-appleInk"
+                  style={{ fontSize: 12, letterSpacing: "-0.01em" }}
+                >
                   {entity.mechanic.replace(/_/g, " ")}
                   {entity.count > 1 ? (
-                    <span className="text-paper/45"> ×{entity.count}</span>
+                    <span className="text-appleGray"> ×{entity.count}</span>
                   ) : null}
                 </span>
               </span>
@@ -118,96 +123,157 @@ export default async function GamePage({ params }: Props) {
   const tier = tierFor(game.difficulty);
 
   return (
-    <div className="space-y-6">
-      <header className="overflow-hidden rounded-2xl border-[3px] border-ink bg-cabinet shadow-sticker">
-        <div className={`h-1.5 w-full bg-gradient-to-r ${mode.accent}`} />
-        <div className="flex flex-wrap items-end justify-between gap-3 p-5">
-          <div className="space-y-1">
-            <h1 className="marquee-title text-3xl text-token">{game.title}</h1>
-            <p className="font-mono text-xs uppercase text-paper/60">
-              by {game.creatorName} · {game.detectedObjectCount} objects ·{" "}
-              {game.theme} theme
-              {position >= 0
-                ? ` · campaign ${position + 1} of ${campaign.length}`
-                : ""}
-            </p>
+    <>
+      <div className="fixed inset-0 -z-10 bg-white" />
+      <div className="space-y-8">
+        <header className="space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="font-inter text-sm font-medium uppercase tracking-wide text-appleGray">
+                Playground
+              </p>
+              <h1
+                className="font-inter font-medium text-appleInk"
+                style={{ fontSize: 30, letterSpacing: "-0.04em" }}
+              >
+                {game.title}
+              </h1>
+              <p
+                className="font-inter text-sm text-appleGray"
+                style={{ letterSpacing: "-0.01em" }}
+              >
+                by {game.creatorName} · {game.detectedObjectCount} objects ·{" "}
+                {game.theme} theme
+                {position >= 0
+                  ? ` · campaign ${position + 1} of ${campaign.length}`
+                  : ""}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <ShareButton
+                slug={slug}
+                className="rounded-full border border-appleGray/30 px-4 py-2 font-inter text-sm font-medium text-appleInk transition hover:border-appleGray/60"
+              />
+              <Link
+                href="/playground"
+                className="rounded-full border border-appleGray/30 px-4 py-2 font-inter text-sm font-medium text-appleInk transition hover:border-appleGray/60"
+                style={{ letterSpacing: "-0.02em" }}
+              >
+                Back to Playground
+              </Link>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <ModeBadge mode={spec.mode ?? "classic"} />
-            <DifficultyBadge difficulty={game.difficulty} size="lg" />
-            <ShareButton slug={slug} />
-            <Link href="/arcade" className="btn-ghost px-3 py-2 text-xs">
-              Back to arcade
-            </Link>
-          </div>
-        </div>
-        {spec.rules ? (
-          <div
-            className={`border-t-[3px] border-ink bg-ink/40 px-5 py-3 ${tier.text}`}
-          >
-            <p className="font-display text-sm uppercase">
-              {spec.rules.headline}
-            </p>
-            <p className="font-body text-sm text-paper/70">
-              {spec.rules.objective}
-            </p>
-          </div>
-        ) : null}
-      </header>
 
-      <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-        <GamePageClient
-          gameId={game.id}
-          slug={slug}
-          spec={spec}
-          sourceImageUrl={game.sourceImageUrl}
-          detectedObjectCount={game.detectedObjectCount}
-        />
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full bg-appleBg px-3 py-1.5 font-inter text-xs font-medium text-appleInk"
+              style={{ letterSpacing: "-0.01em" }}
+            >
+              <span aria-hidden>{mode.icon}</span> {mode.label}
+            </span>
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full bg-appleBg px-3 py-1.5 font-inter text-xs font-medium text-appleInk"
+              style={{ letterSpacing: "-0.01em" }}
+            >
+              Difficulty {tier.level}/5 · {tier.label}
+            </span>
+          </div>
+
+          {spec.rules ? (
+            <div className="rounded-2xl bg-appleBg p-4">
+              <p
+                className="font-inter font-medium text-appleInk"
+                style={{ fontSize: 14, letterSpacing: "-0.02em" }}
+              >
+                {spec.rules.headline}
+              </p>
+              <p
+                className="font-inter text-appleGray"
+                style={{ fontSize: 13, letterSpacing: "-0.01em" }}
+              >
+                {spec.rules.objective}
+              </p>
+            </div>
+          ) : null}
+        </header>
+
         <div className="space-y-6">
-          <LeaderboardPanel leaderboard={leaderboard} />
-          <ObjectsPanel spec={spec} />
-          <Link
-            href={`/create?remixOf=${game.id}`}
-            className="btn-secondary w-full"
-          >
-            Remix with your own objects
-          </Link>
+          <GamePageClient
+            gameId={game.id}
+            slug={slug}
+            spec={spec}
+            sourceImageUrl={game.sourceImageUrl}
+            detectedObjectCount={game.detectedObjectCount}
+          />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <LeaderboardPanel leaderboard={leaderboard} />
+            <ObjectsPanel spec={spec} />
+            <Link
+              href={`/create?remixOf=${game.id}`}
+              className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-appleInk p-5 text-center transition hover:bg-black"
+            >
+              <span
+                className="font-inter font-medium text-white"
+                style={{ fontSize: 15, letterSpacing: "-0.02em" }}
+              >
+                Remix with your own objects
+              </span>
+              <span
+                className="font-inter text-white/60"
+                style={{ fontSize: 12, letterSpacing: "-0.01em" }}
+              >
+                Start a new level from this one
+              </span>
+            </Link>
+          </div>
         </div>
-      </div>
 
-      {previous || next ? (
-        <nav
-          aria-label="Campaign navigation"
-          className="flex flex-wrap items-stretch justify-between gap-3"
-        >
-          {previous ? (
-            <Link
-              href={`/game/${previous.slug}`}
-              className="panel flex-1 transition hover:-translate-y-0.5"
-            >
-              <span className="font-mono text-[10px] uppercase tracking-wider text-paper/45">
-                ← Easier
-              </span>
-              <span className="block font-display text-sm uppercase text-paper">
-                {previous.title}
-              </span>
-            </Link>
-          ) : null}
-          {next ? (
-            <Link
-              href={`/game/${next.slug}`}
-              className="panel flex-1 text-right transition hover:-translate-y-0.5"
-            >
-              <span className="font-mono text-[10px] uppercase tracking-wider text-paper/45">
-                Harder →
-              </span>
-              <span className="block font-display text-sm uppercase text-paper">
-                {next.title}
-              </span>
-            </Link>
-          ) : null}
-        </nav>
-      ) : null}
-    </div>
+        {previous || next ? (
+          <nav
+            aria-label="Campaign navigation"
+            className="flex flex-wrap items-stretch justify-between gap-3"
+          >
+            {previous ? (
+              <Link
+                href={`/game/${previous.slug}`}
+                className="flex-1 rounded-2xl bg-appleBg p-4 transition hover:bg-appleBg/70"
+              >
+                <span
+                  className="block font-inter text-xs font-medium uppercase tracking-wide text-appleGray"
+                  style={{ letterSpacing: "-0.01em" }}
+                >
+                  ← Easier
+                </span>
+                <span
+                  className="block truncate font-inter font-medium text-appleInk"
+                  style={{ fontSize: 14, letterSpacing: "-0.02em" }}
+                >
+                  {previous.title}
+                </span>
+              </Link>
+            ) : null}
+            {next ? (
+              <Link
+                href={`/game/${next.slug}`}
+                className="flex-1 rounded-2xl bg-appleBg p-4 text-right transition hover:bg-appleBg/70"
+              >
+                <span
+                  className="block font-inter text-xs font-medium uppercase tracking-wide text-appleGray"
+                  style={{ letterSpacing: "-0.01em" }}
+                >
+                  Harder →
+                </span>
+                <span
+                  className="block truncate font-inter font-medium text-appleInk"
+                  style={{ fontSize: 14, letterSpacing: "-0.02em" }}
+                >
+                  {next.title}
+                </span>
+              </Link>
+            ) : null}
+          </nav>
+        ) : null}
+      </div>
+    </>
   );
 }

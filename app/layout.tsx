@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Rubik, Fraunces } from "next/font/google";
+import { Space_Grotesk, Rubik, Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 
@@ -22,6 +22,12 @@ const serif = Fraunces({
   variable: "--font-serif",
 });
 
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-inter",
+});
+
 export const metadata: Metadata = {
   title: "Playground — Arrange. Snap. Play. Publish.",
   description:
@@ -29,7 +35,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Playground",
     description:
-      "Turn a photo of real objects into a playable platformer, then publish it to a shared arcade.",
+      "Turn a photo of real objects into a playable platformer, then publish it to a shared playground.",
     type: "website",
   },
 };
@@ -40,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${display.variable} ${body.variable} ${serif.variable} min-h-dvh font-body antialiased`}
+        className={`${display.variable} ${body.variable} ${serif.variable} ${inter.variable} min-h-dvh font-body antialiased`}
       >
         <AppShell>{children}</AppShell>
       </body>

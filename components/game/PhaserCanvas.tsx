@@ -37,7 +37,7 @@ export function PhaserCanvas({ spec, onBus, onError }: PhaserCanvasProps) {
       } catch (cause) {
         console.error("phaser boot failed", cause);
         const message =
-          "This game could not load correctly. Refresh the page or return to the arcade.";
+          "This game could not load correctly. Refresh the page or return to the Playground.";
         setError(message);
         onError?.(message);
       }

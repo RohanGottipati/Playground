@@ -26,25 +26,30 @@ export function GenerationProgress({
   const currentIndex = STEPS.findIndex((step) => step.id === current);
 
   return (
-    <ol className="space-y-2 font-mono text-sm" aria-live="polite">
+    <ol className="space-y-3" aria-live="polite">
       {STEPS.map((step, index) => {
         const complete = current === "done" || index < currentIndex;
         const active = index === currentIndex && current !== "done";
         return (
           <li key={step.id} className="flex items-center gap-3">
             <span
-              className={`flex h-6 w-6 items-center justify-center rounded-md border-2 border-ink text-[11px] ${
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-inter text-[11px] font-medium ${
                 complete
-                  ? "bg-screen text-ink"
+                  ? "bg-appleInk text-white"
                   : active
-                    ? "animate-pulse bg-token text-ink"
-                    : "bg-cabinet text-paper/50"
+                    ? "animate-pulse bg-appleBlue text-white"
+                    : "bg-appleBg text-appleGray"
               }`}
               aria-hidden
             >
               {complete ? "✓" : index + 1}
             </span>
-            <span className={complete || active ? "text-paper" : "text-paper/50"}>
+            <span
+              className={`font-inter text-sm ${
+                complete || active ? "text-appleInk" : "text-appleGray"
+              }`}
+              style={{ letterSpacing: "-0.01em" }}
+            >
               {step.label}
             </span>
           </li>

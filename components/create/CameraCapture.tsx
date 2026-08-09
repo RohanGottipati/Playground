@@ -45,18 +45,20 @@ export function CameraCapture({
         {showTakeButton ? (
           <button
             type="button"
-            className="btn-primary"
             disabled={disabled || remoteLoading}
             onClick={handleTakePhoto}
+            className="rounded-full bg-appleInk px-5 py-2.5 font-inter text-sm font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+            style={{ letterSpacing: "-0.02em" }}
           >
             {remoteLoading ? "Creating QR…" : "Take a photo"}
           </button>
         ) : null}
         <button
           type="button"
-          className="btn-secondary"
           disabled={disabled}
           onClick={() => fileInput.current?.click()}
+          className="rounded-full border border-appleGray/30 px-5 py-2.5 font-inter text-sm font-medium text-appleInk transition hover:border-appleGray/60 disabled:cursor-not-allowed disabled:opacity-60"
+          style={{ letterSpacing: "-0.02em" }}
         >
           Upload a photo
         </button>
@@ -80,7 +82,10 @@ export function CameraCapture({
         onChange={handleChange}
       />
 
-      <p className="rounded-xl border-2 border-token/70 bg-token/10 p-3 font-mono text-xs text-paper/80">
+      <p
+        className="rounded-2xl bg-appleBg p-3 font-inter text-xs text-appleGray"
+        style={{ letterSpacing: "-0.01em" }}
+      >
         Heads up: published games show your photo publicly. Keep faces, screens and
         personal documents out of frame.
       </p>

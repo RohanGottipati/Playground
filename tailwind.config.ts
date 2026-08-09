@@ -16,11 +16,16 @@ export default {
         token: "#ffcf5c",
         screen: "#7ce7c8",
         cable: "#5f7adb",
+        appleInk: "#1d1d1f",
+        appleGray: "#6e6e73",
+        appleBg: "#f5f5f7",
+        appleBlue: "#0068c9",
       },
       fontFamily: {
         display: ["var(--font-display)", "system-ui", "sans-serif"],
         body: ["var(--font-body)", "system-ui", "sans-serif"],
         serif: ["var(--font-serif)", "Georgia", "serif"],
+        inter: ["var(--font-inter)", "system-ui", "sans-serif"],
         mono: ["ui-monospace", "SFMono-Regular", "monospace"],
       },
       boxShadow: {

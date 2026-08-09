@@ -1,67 +1,105 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 
 const ITEMS = [
-  { href: "/", label: "Playground", serif: true },
-  { href: "/arcade", label: "Arcade" },
+  { href: "/playground", label: "Playground" },
   { href: "/stats", label: "Stats" },
   { href: "/create", label: "Make a game" },
 ];
 
-export function NavPill() {
-  const containerRef = useRef<HTMLElement>(null);
-  const itemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
-  const [hovered, setHovered] = useState<number | null>(null);
-  const [highlight, setHighlight] = useState<{ left: number; width: number } | null>(null);
+function HomeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M3 11.5 12 4l9 7.5" />
+      <path d="M5.5 10v9.5a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1V16a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3.5a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1V10" />
+    </svg>
+  );
+}
 
-  function handleEnter(index: number) {
-    const el = itemRefs.current[index];
-    const container = containerRef.current;
-    if (!el || !container) return;
-    const elRect = el.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    setHighlight({ left: elRect.left - containerRect.left, width: elRect.width });
-    setHovered(index);
-  }
+function JoystickIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="6" r="2.5" />
+      <path d="M12 8.5V14" />
+      <rect x="4" y="14" width="16" height="6" rx="2.5" />
+      <path d="M8.5 17h.01M15.5 15.5l1 1M15.5 18.5l1-1" />
+    </svg>
+  );
+}
+
+// Every route that renders this nav sits on top of an opaque light panel
+// (the video background is only ever visible behind the landing page, which
+// never shows the nav), so the pill can stay on a single light color scheme.
+export function NavPill() {
+  const pathname = usePathname();
+  const isGamePage = pathname?.startsWith("/game/") ?? false;
+
+  const circleBase =
+    "flex h-11 w-11 items-center justify-center rounded-full shadow-lg backdrop-blur-xl backdrop-saturate-150 transition-colors duration-150";
+  const circleIdle =
+    "border border-ink/15 bg-white/80 text-ink/60 hover:border-ink/30 hover:text-ink";
+  const circleActive = "border border-ink bg-ink text-white";
 
   return (
-    <nav
-      ref={containerRef}
-      aria-label="Main"
-      onMouseLeave={() => setHovered(null)}
-      className="relative flex items-center rounded-[22px] bg-white/20 p-1.5 shadow-lg shadow-black/20 backdrop-blur-md"
-    >
-      <span
-        className="nav-highlight pointer-events-none absolute top-1.5 bottom-1.5 rounded-xl bg-white"
-        style={{
-          left: highlight ? highlight.left : 0,
-          width: highlight ? highlight.width : 0,
-          opacity: hovered !== null && highlight ? 1 : 0,
-        }}
-      />
-      {ITEMS.map((item, index) => {
-        const isHovered = hovered === index;
-        const isStaticWhite = hovered === null && index !== 0;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            ref={(node) => {
-              itemRefs.current[index] = node;
-            }}
-            onMouseEnter={() => handleEnter(index)}
-            className={`relative z-10 rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-150 ${
-              item.serif ? "font-serif" : "font-body"
-            } ${isHovered || isStaticWhite ? "text-ink" : "text-white"} ${
-              isStaticWhite ? "bg-white" : "bg-transparent"
-            }`}
-          >
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <div className="flex items-center gap-2">
+      <Link
+        href="/"
+        aria-label="Home"
+        className={`${circleBase} ${circleIdle}`}
+      >
+        <HomeIcon className="h-4 w-4" />
+      </Link>
+
+      <nav
+        aria-label="Main"
+        className="relative flex items-center gap-1 rounded-[22px] border border-ink/10 bg-white/80 p-1.5 shadow-lg backdrop-blur-xl backdrop-saturate-150"
+      >
+        {ITEMS.map((item) => {
+          const isActive =
+            pathname === item.href || pathname?.startsWith(`${item.href}/`);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`relative rounded-xl px-4 py-2 font-body text-sm font-medium transition-colors duration-150 ${
+                isActive
+                  ? "bg-ink text-white"
+                  : "bg-transparent text-ink/70 hover:text-ink"
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <Link
+        href="/playground"
+        aria-label="Play"
+        className={`${circleBase} ${isGamePage ? circleActive : circleIdle}`}
+      >
+        <JoystickIcon className="h-4 w-4" />
+      </Link>
+    </div>
   );
 }
