@@ -6,6 +6,7 @@ import { LeaderboardPanel } from "@/components/game/LeaderboardPanel";
 import { DifficultyBadge, ModeBadge } from "@/components/ui/Badge";
 import { modeMeta, tierFor } from "@/components/ui/difficulty";
 import { spriteUrl } from "@/components/ui/spriteUrl";
+import { ShareButton } from "@/components/ui/ShareButton";
 import { repository } from "@/lib/db";
 
 import type { GameSpec } from "@/game/types";
@@ -134,6 +135,7 @@ export default async function GamePage({ params }: Props) {
           <div className="flex items-center gap-2">
             <ModeBadge mode={spec.mode ?? "classic"} />
             <DifficultyBadge difficulty={game.difficulty} size="lg" />
+            <ShareButton slug={slug} />
             <Link href="/arcade" className="btn-ghost px-3 py-2 text-xs">
               Back to arcade
             </Link>
