@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import type { RunResult } from "@/game/bus";
+import type { GameBus, RunResult } from "@/game/bus";
 import { paletteForSpec } from "@/game/theme";
 import type { GameSpec } from "@/game/types";
 
@@ -41,5 +41,12 @@ export class ResultScene extends Phaser.Scene {
     });
     text.setOrigin(0.5, 0.5);
     text.setScrollFactor(0);
+
+    this.input.keyboard?.once("keydown-R", () => {
+      const bus = this.registry.get("bus") as GameBus;
+      bus.emit("gameEvent", { type: "game_restarted" });
+      this.scene.stop();
+      this.scene.get("GameScene").scene.restart();
+    });
   }
 }
