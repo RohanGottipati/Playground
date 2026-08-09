@@ -1,4 +1,5 @@
 import { failure, ok } from "@/lib/api/respond";
+import { readJsonBody } from "@/lib/api/request";
 import { LikeRequestSchema } from "@/lib/analytics/eventSchemas";
 import { repository } from "@/lib/db";
 import { AppError } from "@/lib/errors/AppError";
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
   try {
     checkRateLimit(clientKey(request, "likes"), RATE_LIMITS.likes);
 
-    const parsed = LikeRequestSchema.safeParse(await request.json());
+    const parsed = LikeRequestSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       throw new AppError("SCHEMA_VALIDATION_FAILED", "invalid like request");
     }

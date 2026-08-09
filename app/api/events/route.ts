@@ -1,11 +1,12 @@
 import { failure, ok } from "@/lib/api/respond";
+import { parseJson, readTextBody } from "@/lib/api/request";
 import {
   EventRequestSchema,
   MAX_EVENT_PAYLOAD_BYTES,
   TelemetryQuerySchema,
 } from "@/lib/analytics/eventSchemas";
 import { repository } from "@/lib/db";
-import { TELEMETRY_EVENT_TYPES } from "@/lib/db/types";
+import { MIN_PLAUSIBLE_COMPLETION_MS, TELEMETRY_EVENT_TYPES } from "@/lib/db/types";
 import { AppError } from "@/lib/errors/AppError";
 import { platformCity } from "@/lib/geo/platformCity";
 import {
@@ -16,19 +17,18 @@ import {
 
 export const runtime = "nodejs";
 
-const MIN_PLAUSIBLE_COMPLETION_MS = 1500;
 const TELEMETRY_EVENT_TYPE_SET: Set<string> = new Set(TELEMETRY_EVENT_TYPES);
 
 export async function POST(request: Request) {
   try {
     checkRateLimit(clientKey(request, "events"), RATE_LIMITS.events);
 
-    const body = await request.text();
+    const body = await readTextBody(request);
     if (body.length > MAX_EVENT_PAYLOAD_BYTES) {
       throw new AppError("SCHEMA_VALIDATION_FAILED", "event payload too large");
     }
 
-    const parsed = EventRequestSchema.safeParse(JSON.parse(body));
+    const parsed = EventRequestSchema.safeParse(parseJson(body));
     if (!parsed.success) {
       throw new AppError("SCHEMA_VALIDATION_FAILED", "invalid event");
     }

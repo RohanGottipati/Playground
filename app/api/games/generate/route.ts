@@ -1,4 +1,5 @@
 import { failure, ok } from "@/lib/api/respond";
+import { readJsonBody } from "@/lib/api/request";
 import { GenerateRequestSchema } from "@/lib/analytics/eventSchemas";
 import { analyzeImage } from "@/lib/backboard/client";
 import { AI_SCHEMA_VERSION } from "@/lib/backboard/schemas";
@@ -19,7 +20,14 @@ import { checkRateLimit, clientKey, RATE_LIMITS } from "@/lib/utils/rateLimit";
 import { logDiagnostic } from "@/lib/utils/logger";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+/**
+ * Must exceed this route's own worst-case budget, or Vercel kills the
+ * invocation with an opaque FUNCTION_INVOCATION_TIMEOUT before the handler can
+ * report a real error. Analysis alone can spend 75s (3 Backboard attempts at a
+ * 25s timeout each), plus up to 25s of best-effort Magic Patterns and the image
+ * fetch, so 60s was reachable in normal operation.
+ */
+export const maxDuration = 180;
 
 /** Dev-only QA override so each template can be exercised on demand. */
 function devForcedTemplate(): TemplateId | undefined {
@@ -54,7 +62,7 @@ export async function POST(request: Request) {
   try {
     checkRateLimit(clientKey(request, "generate"), RATE_LIMITS.generate);
 
-    const parsed = GenerateRequestSchema.safeParse(await request.json());
+    const parsed = GenerateRequestSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       throw new AppError("SCHEMA_VALIDATION_FAILED", "invalid generate request");
     }

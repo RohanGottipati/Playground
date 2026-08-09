@@ -1,4 +1,5 @@
 import { failure, ok } from "@/lib/api/respond";
+import { readJsonBody } from "@/lib/api/request";
 import { PublishRequestSchema } from "@/lib/analytics/eventSchemas";
 import { repository } from "@/lib/db";
 import { discoveryPairs } from "@/lib/discovery/mechanicDiscovery";
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
   try {
     checkRateLimit(clientKey(request, "publish"), RATE_LIMITS.publish);
 
-    const parsed = PublishRequestSchema.safeParse(await request.json());
+    const parsed = PublishRequestSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       throw new AppError("SCHEMA_VALIDATION_FAILED", "invalid publish request");
     }

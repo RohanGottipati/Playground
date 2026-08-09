@@ -1,4 +1,5 @@
 import { failure, ok } from "@/lib/api/respond";
+import { readFormData } from "@/lib/api/request";
 import {
   claimCaptureUpload,
   completeCaptureUpload,
@@ -22,7 +23,7 @@ export async function POST(
       clientKey(request, "capture-upload"),
       RATE_LIMITS.captureUpload,
     );
-    const form = await request.formData();
+    const form = await readFormData(request);
     const file = form.get("file");
     if (!(file instanceof File)) {
       throw new AppError("INVALID_IMAGE", "missing file field");
