@@ -3,27 +3,30 @@ import { GenerateRequestSchema } from "@/lib/analytics/eventSchemas";
 import { analyzeImage } from "@/lib/backboard/client";
 import { AI_SCHEMA_VERSION } from "@/lib/backboard/schemas";
 import { PROMPT_VERSION } from "@/lib/backboard/prompts";
-import { generateLevel } from "@/game/generation/generateLevel";
+import {
+  buildTemplateSpec,
+  isTemplateId,
+  type TemplateId,
+} from "@/game/templates";
 import { EMPTY_HINTS } from "@/game/generation/hints";
 import { randomSeed } from "@/game/generation/rng";
 import { mechanicForObject } from "@/game/generation/assignMechanics";
 import { normalizeObjects } from "@/game/generation/normalizeObjects";
 import { repository } from "@/lib/db";
 import { AppError } from "@/lib/errors/AppError";
-import {
-  createMagicPatternsDesign,
-  isMagicPatternsConfigured,
-} from "@/lib/magicpatterns/client";
-import {
-  adaptDesignPalette,
-  buildDesignPrompt,
-} from "@/lib/magicpatterns/adapt";
 import { getMemoryImage } from "@/lib/storage/images";
 import { checkRateLimit, clientKey, RATE_LIMITS } from "@/lib/utils/rateLimit";
 import { logDiagnostic } from "@/lib/utils/logger";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+/** Dev-only QA override so each template can be exercised on demand. */
+function devForcedTemplate(): TemplateId | undefined {
+  if (process.env.NODE_ENV === "production") return undefined;
+  const forced = process.env.PLAYGROUND_FORCE_TEMPLATE;
+  return isTemplateId(forced) ? forced : undefined;
+}
 
 async function loadImage(
   gameId: string,
@@ -64,51 +67,26 @@ export async function POST(request: Request) {
     logDiagnostic("generation.started", { gameId });
 
     const { bytes, mimeType } = await loadImage(gameId, imageUrl);
+    // The analysis only decides which bundled components dress the fixed
+    // template slots — layouts and objectives are hand-built and the template
+    // itself is a seeded coin flip, never an AI decision.
     const { analysis, metadata } = await analyzeImage({
       image: bytes,
       fileName: `${gameId}.jpg`,
       mimeType,
     });
 
-    // Learning loop: what earlier runs produced and how players fared.
+    // What the last few uploads produced, so this one can refuse to repeat it.
     const hints = await db.getGenerationHints().catch(() => EMPTY_HINTS);
 
-    // A fresh seed each run makes the same photo produce a different game.
-    let spec = generateLevel(analysis, {
+    const spec = buildTemplateSpec(analysis, randomSeed(), {
       imageUrl,
-      seed: randomSeed(),
-      hints,
+      forceTemplate: devForcedTemplate(),
+      recentTemplates: hints.recentTemplates,
     });
 
     const normalized = normalizeObjects(analysis);
 
-    // [Prompt] -> [AI Agent] -> (API call) -> [Magic Patterns]
-    //          -> [Editor URL & Spec] -> [Adapts Code]. Best effort only.
-    if (isMagicPatternsConfigured()) {
-      try {
-        const design = await createMagicPatternsDesign({
-          prompt: buildDesignPrompt(
-            spec,
-            normalized.map((object) => object.label),
-          ),
-          image: { bytes, mimeType, fileName: `${gameId}.jpg` },
-        });
-        spec = {
-          ...spec,
-          magicPatterns: {
-            designId: design.designId,
-            editorUrl: design.editorUrl,
-            previewUrl: design.previewUrl,
-            palette: adaptDesignPalette(design.sourceFiles),
-          },
-        };
-      } catch (error) {
-        logDiagnostic("magicpatterns.failed", {
-          gameId,
-          message: error instanceof Error ? error.message : "unknown",
-        });
-      }
-    }
     const record = await db.saveDraftGame({
       id: gameId,
       title: spec.title,
@@ -151,7 +129,7 @@ export async function POST(request: Request) {
       },
     });
 
-    // Learning loop: persist this run so future generations improve on it.
+    // Learning loop: persist this run so the stats pages stay truthful.
     await db
       .saveGenerationInsight({
         gameId,
@@ -164,8 +142,8 @@ export async function POST(request: Request) {
         mechanics: [
           ...new Set(spec.entities.map((entity) => entity.mechanic)),
         ],
-        magicPatternsId: spec.magicPatterns?.designId ?? null,
-        magicPatternsEditorUrl: spec.magicPatterns?.editorUrl ?? null,
+        magicPatternsId: null,
+        magicPatternsEditorUrl: null,
         promptVersion: PROMPT_VERSION,
       })
       .catch((error: unknown) => {
@@ -181,6 +159,7 @@ export async function POST(request: Request) {
       latencyMs: metadata.latencyMs,
       status: metadata.status,
       mode: spec.mode ?? "classic",
+      template: spec.templateId ?? "unknown",
       seed: spec.seed ?? 0,
       difficulty: spec.difficulty,
       repaired: spec.validation.repaired,

@@ -9,8 +9,11 @@ No prompts, no tile editors, no level-design knowledge, no account.
 
 ## How it works
 
-1. `/create` takes one photo containing one or more visible objects (camera on
-   mobile, file picker on desktop) and compresses it in the browser.
+1. `/create` takes one photo containing one or more visible objects. Phones open
+   their camera directly; desktops can show a one-time QR code that opens the
+   camera-only `/capture/<token>` page on a phone. The phone upload appears on
+   the desktop automatically, while a normal desktop file picker remains
+   available.
 2. `POST /api/uploads` validates, rotates and normalizes the photo to JPEG, then
    stores it (Supabase Storage, or an in-process store locally).
 3. `POST /api/games/generate` sends the image to **Backboard GPT-4o** with a
@@ -139,7 +142,9 @@ registry. `0005_renderable_object_components.sql` lets exact object artwork be
 selected independently from its safe fallback mechanic.
 `0006_generation_learning.sql` adds the service-role-only
 `generation_insights` table and replaces the `game_summaries` view to expose
-each game's `mode`. After applying them,
+each game's `mode`. `0007_phone_capture_sessions.sql` adds the private,
+short-lived pairing records used by QR phone capture; raw bearer tokens are
+never stored and the table has no anonymous access. After applying them,
 sync the canonical 349-row catalog and optionally backfill older game specs:
 
 ```bash

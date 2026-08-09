@@ -27,6 +27,9 @@ export function checkRateLimit(key: string, rule: RateLimitRule): void {
 
 export const RATE_LIMITS = {
   upload: { limit: 12, windowMs: 60_000 },
+  captureCreate: { limit: 10, windowMs: 60_000 },
+  captureStatus: { limit: 90, windowMs: 60_000 },
+  captureUpload: { limit: 12, windowMs: 60_000 },
   generate: { limit: 12, windowMs: 60_000 },
   publish: { limit: 10, windowMs: 60_000 },
   events: { limit: 240, windowMs: 60_000 },

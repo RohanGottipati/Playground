@@ -1,17 +1,27 @@
 "use client";
 
 import { useRef } from "react";
+import { currentDeviceCapturesDirectly } from "@/lib/utils/deviceCapture";
 
 type Props = {
   onSelect: (file: File) => void;
+  onRemoteCapture?: () => void;
+  remoteLoading?: boolean;
+  showTakeButton?: boolean;
   disabled?: boolean;
 };
 
 /**
- * Uses the native camera on mobile (capture="environment") and doubles as a
- * file picker everywhere else, so no getUserMedia permission dance is needed.
+ * Uses the native camera on mobile and delegates desktop capture to the QR
+ * handoff, while retaining a normal file picker on every device.
  */
-export function CameraCapture({ onSelect, disabled }: Props) {
+export function CameraCapture({
+  onSelect,
+  onRemoteCapture,
+  remoteLoading = false,
+  showTakeButton = true,
+  disabled,
+}: Props) {
   const cameraInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -21,17 +31,27 @@ export function CameraCapture({ onSelect, disabled }: Props) {
     if (file) onSelect(file);
   }
 
+  function handleTakePhoto() {
+    if (!onRemoteCapture || currentDeviceCapturesDirectly()) {
+      cameraInput.current?.click();
+      return;
+    }
+    onRemoteCapture();
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          className="btn-primary"
-          disabled={disabled}
-          onClick={() => cameraInput.current?.click()}
-        >
-          Take a photo
-        </button>
+        {showTakeButton ? (
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={disabled || remoteLoading}
+            onClick={handleTakePhoto}
+          >
+            {remoteLoading ? "Creating QR…" : "Take a photo"}
+          </button>
+        ) : null}
         <button
           type="button"
           className="btn-secondary"

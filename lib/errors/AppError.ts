@@ -1,6 +1,9 @@
 export type ErrorCode =
   | "INVALID_IMAGE"
   | "UPLOAD_FAILED"
+  | "CAPTURE_NOT_FOUND"
+  | "CAPTURE_EXPIRED"
+  | "CAPTURE_USED"
   | "BACKBOARD_TIMEOUT"
   | "BACKBOARD_INVALID_RESPONSE"
   | "BACKBOARD_CONFIGURATION_ERROR"
@@ -17,6 +20,9 @@ export type ErrorCode =
 const STATUS_BY_CODE: Record<ErrorCode, number> = {
   INVALID_IMAGE: 400,
   UPLOAD_FAILED: 502,
+  CAPTURE_NOT_FOUND: 404,
+  CAPTURE_EXPIRED: 410,
+  CAPTURE_USED: 409,
   BACKBOARD_TIMEOUT: 504,
   BACKBOARD_INVALID_RESPONSE: 502,
   BACKBOARD_CONFIGURATION_ERROR: 503,
@@ -36,6 +42,12 @@ const USER_MESSAGE_BY_CODE: Record<ErrorCode, string> = {
     "That file is not a supported photo. Use a JPEG, PNG, WebP or HEIC image under 8 MB.",
   UPLOAD_FAILED:
     "The photo could not be uploaded. Check your connection and try again.",
+  CAPTURE_NOT_FOUND:
+    "This phone capture link is invalid or has been cancelled. Create a new QR code on your laptop.",
+  CAPTURE_EXPIRED:
+    "This phone capture link has expired. Create a new QR code on your laptop.",
+  CAPTURE_USED:
+    "A photo has already been sent with this link. Return to your laptop to continue.",
   BACKBOARD_TIMEOUT:
     "Photo analysis took too long. Try analyzing this photo again.",
   BACKBOARD_INVALID_RESPONSE:
@@ -61,6 +73,9 @@ const USER_MESSAGE_BY_CODE: Record<ErrorCode, string> = {
 const RETRYABLE_BY_CODE: Record<ErrorCode, boolean> = {
   INVALID_IMAGE: false,
   UPLOAD_FAILED: true,
+  CAPTURE_NOT_FOUND: false,
+  CAPTURE_EXPIRED: false,
+  CAPTURE_USED: false,
   BACKBOARD_TIMEOUT: true,
   BACKBOARD_INVALID_RESPONSE: true,
   BACKBOARD_CONFIGURATION_ERROR: false,

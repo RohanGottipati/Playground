@@ -1,4 +1,5 @@
 import type { GameSpec, GameEventType, MechanicType } from "@/game/types";
+import type { ComponentCatalogEntry } from "@/game/components/types";
 import type { GenerationHints } from "@/game/generation/hints";
 import type { SceneAnalysis } from "@/lib/backboard/schemas";
 
@@ -99,6 +100,8 @@ export type GameSummary = {
 };
 
 export type ArcadeSort =
+  /** Campaign order: gentlest first, so the arcade ramps up as it scrolls. */
+  | "campaign"
   | "newest"
   | "trending"
   | "hardest"
@@ -288,4 +291,11 @@ export interface Repository {
   getGenerationHints(): Promise<GenerationHints>;
   /** Learning loop: persist what this generation produced. */
   saveGenerationInsight(input: GenerationInsightInput): Promise<void>;
+  /**
+   * Enabled rows from the component_catalog table, so generation reflects
+   * live enable/disable and alias edits. Null when the backing store has no
+   * catalog (memory mode) or the query fails — callers fall back to the
+   * bundled catalog.
+   */
+  getEnabledComponentCatalog(): Promise<ComponentCatalogEntry[] | null>;
 }

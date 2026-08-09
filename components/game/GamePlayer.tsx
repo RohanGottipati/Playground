@@ -31,6 +31,22 @@ const EMPTY_HUD: HudState = {
   totalCollectibles: 0,
 };
 
+/** The photographed object that best represents a level, for the rules card. */
+function heroComponentId(spec: GameSpec): string | undefined {
+  if (spec.gauntlet) {
+    const turret = spec.entities.find(
+      (entity) => entity.id === spec.gauntlet?.turretId,
+    );
+    if (turret?.visual?.componentId) return turret.visual.componentId;
+  }
+  return (
+    spec.skyfall?.componentIds[0] ??
+    spec.projectile?.componentId ??
+    spec.entities.find((entity) => entity.sourceLabel && entity.visual?.componentId)
+      ?.visual?.componentId
+  );
+}
+
 export function GamePlayer({
   gameId,
   spec,
@@ -46,6 +62,8 @@ export function GamePlayer({
   const [showPhoto, setShowPhoto] = useState(false);
   const [showRules, setShowRules] = useState(true);
   const [controls, setControls] = useState<ControlState | null>(null);
+  const [engineReady, setEngineReady] = useState(false);
+  const [engineError, setEngineError] = useState<string | null>(null);
   const sessionRef = useRef<string | undefined>(undefined);
   const hudRef = useRef<HudState>(EMPTY_HUD);
 
@@ -54,7 +72,15 @@ export function GamePlayer({
 
   const onBus = useCallback(
     (bus: GameBus, controlState: ControlState) => {
+      setEngineReady(false);
+      setEngineError(null);
       setControls(controlState);
+
+      bus.on("ready", () => setEngineReady(true));
+      bus.on("error", ({ message }) => {
+        setEngineReady(false);
+        setEngineError(message);
+      });
 
       bus.on("hud", (next) => {
         hudRef.current = next;
@@ -120,10 +146,10 @@ export function GamePlayer({
   }, [controls]);
 
   const startRun = useCallback(() => {
-    if (!controls) return;
+    if (!controls || !engineReady || engineError) return;
     controls.started = true;
     setShowRules(false);
-  }, [controls]);
+  }, [controls, engineError, engineReady]);
 
   const reopenRules = useCallback(() => {
     // Pausing via the scene's start gate: physics and the timer idle while
@@ -136,13 +162,23 @@ export function GamePlayer({
     <div className="min-w-0 space-y-3">
       <GameHUD hud={hud} title={spec.title} mode={mode} />
       <div className="relative">
-        <PhaserCanvas spec={spec} onBus={onBus} />
-        {showRules ? (
+        <PhaserCanvas spec={spec} onBus={onBus} onError={setEngineError} />
+        {engineError ? (
+          <div
+            className="absolute inset-0 z-20 flex items-center justify-center bg-ink/90 p-5"
+            role="alert"
+          >
+            <div className="panel max-w-lg text-center text-sm text-paper">
+              {engineError}
+            </div>
+          </div>
+        ) : showRules ? (
           <GameRulesModal
             rules={rules}
             mode={mode}
             difficulty={spec.difficulty}
-            ready={controls !== null}
+            heroComponentId={heroComponentId(spec)}
+            ready={engineReady}
             onStart={startRun}
           />
         ) : null}

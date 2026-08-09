@@ -7,13 +7,14 @@ import type { GameSpec } from "@/game/types";
 export type PhaserCanvasProps = {
   spec: GameSpec;
   onBus: (bus: GameBus, controls: ControlState) => void;
+  onError?: (message: string) => void;
 };
 
 /**
  * Mounts one Phaser instance for the given spec and hands the event bus back to
  * React. Frame state stays inside Phaser.
  */
-export function PhaserCanvas({ spec, onBus }: PhaserCanvasProps) {
+export function PhaserCanvas({ spec, onBus, onError }: PhaserCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +36,10 @@ export function PhaserCanvas({ spec, onBus }: PhaserCanvasProps) {
         onBus(handle.bus, handle.controls);
       } catch (cause) {
         console.error("phaser boot failed", cause);
-        setError("This game could not load correctly. Refresh the page or return to the arcade.");
+        const message =
+          "This game could not load correctly. Refresh the page or return to the arcade.";
+        setError(message);
+        onError?.(message);
       }
     }
 
@@ -46,7 +50,7 @@ export function PhaserCanvas({ spec, onBus }: PhaserCanvasProps) {
       destroy?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spec]);
+  }, [spec, onError]);
 
   if (error) {
     return (

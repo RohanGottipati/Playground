@@ -13,6 +13,10 @@ import { paletteForSpec, type ThemePalette } from "@/game/theme";
 import type { GameSpec } from "@/game/types";
 import { createRng, type Rng } from "@/game/generation/rng";
 import {
+  winConditionFor,
+  type WinCondition,
+} from "@/game/generation/winCondition";
+import {
   createPlayer,
   respawnPlayer,
   updatePlayerArt,
@@ -33,12 +37,25 @@ import {
   createProjectileVisual,
   createSkyfallVisual,
   destroyEntityArt,
+  syncEntityArt,
 } from "@/game/art/entityArt";
 import { createGroundArt, createWorldBackdrop } from "@/game/art/worldArt";
+import {
+  EDGE_MARGIN,
+  isShelter,
+  MIN_SHELTER_GAP,
+  rowsByTop,
+  SHELTER_MOVEMENT_PROFILES,
+  type ShelterMovementProfile,
+} from "@/game/templates/shelters";
 
 const PORTAL_COOLDOWN_MS = 900;
 const HUD_INTERVAL_MS = 100;
 const GOAL_HINT_COOLDOWN_MS = 1400;
+/** Post-shove grace so a drone can't juggle the player forever. */
+const KNOCKBACK_MS = 400;
+const KNOCKBACK_VELOCITY_X = 300;
+const KNOCKBACK_VELOCITY_Y = -260;
 
 type CollectibleRect = StaticRect & { collected?: boolean };
 
@@ -53,6 +70,12 @@ type Faller = Phaser.GameObjects.Rectangle & {
   visual: Phaser.GameObjects.Container;
 };
 
+type ShelterRuntime = {
+  rect: StaticRect;
+  vanished: boolean;
+  busy: boolean;
+};
+
 export class GameScene extends Phaser.Scene {
   private spec!: GameSpec;
   private bus!: GameBus;
@@ -63,6 +86,7 @@ export class GameScene extends Phaser.Scene {
   private portals: StaticRect[] = [];
   private targets: TargetRect[] = [];
   private projectiles: Projectile[] = [];
+  private enemyShots: Projectile[] = [];
   private fallers: Faller[] = [];
   private goal: StaticRect | undefined;
   private keys!: {
@@ -81,6 +105,13 @@ export class GameScene extends Phaser.Scene {
   private started = false;
   private hasEverStarted = false;
   private goalLocked = false;
+  private winCondition: WinCondition = "door";
+  /** Survive-mode clock; only advances outside the spawn safe zone. */
+  private surviveElapsedMs = 0;
+  /** Dodge-storm streak: fallers smashed while the player braved the storm. */
+  private avoided = 0;
+  private knockbackUntil = 0;
+  private solids: Phaser.GameObjects.GameObject[] = [];
   private hudAccumulator = 0;
   private portalCooldownUntil = 0;
   private goalHintUntil = 0;
@@ -90,6 +121,9 @@ export class GameScene extends Phaser.Scene {
   private facing: 1 | -1 = 1;
   private rng!: Rng;
   private skyfallTimer: Phaser.Time.TimerEvent | undefined;
+  private gauntletTimer: Phaser.Time.TimerEvent | undefined;
+  private shelterTimer: Phaser.Time.TimerEvent | undefined;
+  private shelterRows: ShelterRuntime[][] = [];
 
   constructor() {
     super("GameScene");
@@ -109,14 +143,22 @@ export class GameScene extends Phaser.Scene {
     this.completed = false;
     this.started = false;
     this.hudAccumulator = 0;
+    this.surviveElapsedMs = 0;
+    this.avoided = 0;
+    this.knockbackUntil = 0;
+    this.winCondition = winConditionFor(this.spec);
     this.facing = 1;
     this.collectibles = [];
     this.portals = [];
     this.targets = [];
     this.projectiles = [];
+    this.enemyShots = [];
     this.fallers = [];
     this.goal = undefined;
     this.skyfallTimer = undefined;
+    this.gauntletTimer = undefined;
+    this.shelterTimer = undefined;
+    this.shelterRows = [];
 
     const { width, height, gravityY } = this.spec.world;
     this.physics.world.setBounds(0, 0, width, height);
@@ -127,14 +169,21 @@ export class GameScene extends Phaser.Scene {
     createWorldBackdrop(this, this.spec, this.palette);
 
     const solids: Phaser.GameObjects.GameObject[] = [this.createGround()];
+    this.solids = solids;
     const bouncePads: Phaser.GameObjects.GameObject[] = [];
     const hazards: Phaser.GameObjects.GameObject[] = [];
+    const shelterById = new Map<string, StaticRect>();
 
     for (const entity of this.spec.entities) {
       switch (entity.mechanic) {
-        case "static_platform":
-          solids.push(createStaticPlatform(this, entity, this.palette));
+        case "static_platform": {
+          const platform = createStaticPlatform(this, entity, this.palette);
+          solids.push(platform);
+          if (this.spec.skyfall && isShelter(entity)) {
+            shelterById.set(entity.id, platform);
+          }
           break;
+        }
         case "moving_platform":
           solids.push(createMovingPlatform(this, entity, this.palette));
           break;
@@ -167,12 +216,26 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Modes with an objective start with a locked exit door.
+    if (this.spec.skyfall && shelterById.size > 0) {
+      const shelterEntities = this.spec.entities.filter(isShelter);
+      this.shelterRows = rowsByTop(shelterEntities)
+        .map((row) =>
+          row
+            .map((entity) => shelterById.get(entity.id))
+            .filter((rect): rect is StaticRect => Boolean(rect))
+            .map((rect) => ({ rect, vanished: false, busy: false })),
+        )
+        .filter((row) => row.length > 0);
+    }
+
+    // Legacy shooter/rush specs carry a door that starts locked; new specs of
+    // those modes have no door and win straight through their objective.
     this.goalLocked =
-      (this.spec.mode === "shooter" &&
+      this.winCondition === "door" &&
+      ((this.spec.mode === "shooter" &&
         (this.spec.shooter?.requiredKills ?? 0) > 0) ||
-      (this.spec.mode === "rush" &&
-        (this.spec.rush?.requiredCollectibles ?? 0) > 0);
+        (this.spec.mode === "rush" &&
+          (this.spec.rush?.requiredCollectibles ?? 0) > 0));
     if (this.goalLocked && this.goal) this.goal.art.setAlpha(0.55);
 
     this.player = createPlayer(this, this.spec, this.palette);
@@ -188,8 +251,12 @@ export class GameScene extends Phaser.Scene {
       this.collect(other as CollectibleRect),
     );
     if (this.targets.length > 0) {
+      // Drones shove instead of kill: near-surface hovers would otherwise
+      // leave almost no safe standing room on narrow platforms.
       this.physics.add.overlap(this.player, this.targets, (_p, other) => {
-        if (!(other as TargetRect).destroyed) this.killPlayer();
+        if (!(other as TargetRect).destroyed) {
+          this.bumpPlayerOff(other as TargetRect);
+        }
       });
     }
     if (this.portals.length === 2) {
@@ -202,6 +269,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.spec.skyfall) this.startSkyfall();
+    if (this.spec.gauntlet) this.startGauntlet();
 
     this.registerKeys();
     // The rules popup gates the run: physics stays frozen until the player
@@ -233,6 +301,14 @@ export class GameScene extends Phaser.Scene {
     if (!this.completed) {
       this.elapsedMs += delta;
       this.hudAccumulator += delta;
+      // The survive clock only runs while the player braves the open —
+      // camping the spawn safe zone must not run out the storm.
+      if (
+        this.winCondition === "survive" &&
+        this.player.x >= SKYFALL_SAFE_ZONE_X
+      ) {
+        this.surviveElapsedMs += delta;
+      }
       if (this.hudAccumulator >= HUD_INTERVAL_MS) {
         this.hudAccumulator = 0;
         this.emitHud();
@@ -240,6 +316,11 @@ export class GameScene extends Phaser.Scene {
       if (this.timeLeftMs() === 0) {
         this.flashMessage("OUT OF TIME");
         this.restartRun();
+        return;
+      }
+      if (this.surviveLeftMs() === 0) {
+        this.flashMessage("STORM SURVIVED");
+        this.finish();
         return;
       }
     }
@@ -252,7 +333,10 @@ export class GameScene extends Phaser.Scene {
 
     const body = this.player.body;
     const speed = this.spec.player.moveSpeed;
-    body.setVelocityX(left && !right ? -speed : right && !left ? speed : 0);
+    // A drone shove owns the player's velocity for a beat; input resumes after.
+    if (time >= this.knockbackUntil) {
+      body.setVelocityX(left && !right ? -speed : right && !left ? speed : 0);
+    }
     if (left && !right) this.facing = -1;
     if (right && !left) this.facing = 1;
     if (body.velocity.y > MAX_FALL_SPEED) body.setVelocityY(MAX_FALL_SPEED);
@@ -275,6 +359,7 @@ export class GameScene extends Phaser.Scene {
     this.shootWasDown = shoot;
 
     this.updateProjectiles();
+    this.updateEnemyShots();
     this.updateFallers();
 
     if (this.player.y > this.spec.world.height - 4 && !this.completed) {
@@ -366,6 +451,10 @@ export class GameScene extends Phaser.Scene {
 
     const projectile = rect as Projectile;
     projectile.body.setAllowGravity(false);
+    // No collider is ever registered against solids, hazards or the world
+    // bounds: a shot passes straight through everything in its way and only
+    // ever stops on a drone (or when it leaves the level).
+    projectile.body.setCollideWorldBounds(false);
     projectile.body.setVelocityX(this.facing * projectileSpec.speed);
     projectile.spawnX = projectile.x;
     projectile.visual = createProjectileVisual(
@@ -395,12 +484,15 @@ export class GameScene extends Phaser.Scene {
   private updateProjectiles() {
     const projectileSpec = this.spec.projectile;
     if (!projectileSpec) return;
+    // Range never cuts a shot short inside the level — already-published specs
+    // carry a shorter stored range, which read as shots dying against scenery.
+    const range = Math.max(projectileSpec.maxRangePx, this.spec.world.width);
     for (const projectile of [...this.projectiles]) {
       projectile.visual.setPosition(projectile.x, projectile.y);
       const traveled = Math.abs(projectile.x - projectile.spawnX);
       const outOfWorld =
         projectile.x < -30 || projectile.x > this.spec.world.width + 30;
-      if (traveled > projectileSpec.maxRangePx || outOfWorld) {
+      if (traveled > range || outOfWorld) {
         this.removeProjectile(projectile);
       }
     }
@@ -438,8 +530,128 @@ export class GameScene extends Phaser.Scene {
     });
 
     if (this.spec.mode === "shooter" && this.killCount >= required) {
-      this.unlockGoal();
+      if (this.winCondition === "destroy_all") {
+        this.flashMessage("ALL DRONES DOWN");
+        // Short delay lets the last burst animation land before the results.
+        this.time.delayedCall(400, () => this.finish());
+      } else {
+        this.unlockGoal();
+      }
     }
+  }
+
+  /** Contact with a live drone shoves the player back instead of killing. */
+  private bumpPlayerOff(target: TargetRect) {
+    if (this.completed || this.time.now < this.knockbackUntil) return;
+    this.knockbackUntil = this.time.now + KNOCKBACK_MS;
+    const direction = this.player.x < target.x ? -1 : 1;
+    this.player.body.setVelocity(
+      direction * KNOCKBACK_VELOCITY_X,
+      KNOCKBACK_VELOCITY_Y,
+    );
+    this.cameras.main.shake(90, 0.004);
+  }
+
+  // --------------------------------------------------------------- gauntlet
+
+  private startGauntlet() {
+    const gauntlet = this.spec.gauntlet;
+    if (!gauntlet) return;
+    this.gauntletTimer = this.time.addEvent({
+      delay: gauntlet.intervalMs,
+      loop: true,
+      callback: () => this.fireTurretShot(),
+    });
+  }
+
+  private turretMuzzle(): { x: number; y: number } {
+    const gauntlet = this.spec.gauntlet;
+    const turret = this.spec.entities.find(
+      (entity) => entity.id === gauntlet?.turretId,
+    );
+    const bounds = turret?.bounds ?? {
+      x: this.spec.world.width - 80,
+      y: GROUND_TOP - 120,
+      width: 70,
+      height: 120,
+    };
+    return { x: bounds.x - 10, y: bounds.y + bounds.height * 0.35 };
+  }
+
+  private fireTurretShot() {
+    const gauntlet = this.spec.gauntlet;
+    if (!gauntlet || !this.started || this.completed) return;
+    if (this.enemyShots.length >= 4) return;
+
+    // Low shots skim the floor (jump them); high shots fly over at head
+    // height (stay grounded). The mix keeps both instincts honest.
+    const low = this.rng.next() < 0.6;
+    const y = low ? GROUND_TOP - 22 : GROUND_TOP - 92;
+    const muzzle = this.turretMuzzle();
+
+    const flash = this.add.circle(muzzle.x, y, 7, this.palette.hazard, 0.9);
+    flash.setDepth(9);
+    this.tweens.add({
+      targets: flash,
+      radius: 20,
+      alpha: 0,
+      duration: 200,
+      onComplete: () => flash.destroy(),
+    });
+
+    const rect = this.add.rectangle(
+      muzzle.x,
+      y,
+      PROJECTILE_SIZE,
+      PROJECTILE_SIZE,
+      this.palette.hazard,
+    );
+    this.physics.add.existing(rect);
+    rect.setVisible(false);
+
+    const shot = rect as Projectile;
+    shot.body.setAllowGravity(false);
+    shot.body.setVelocityX(-gauntlet.projectileSpeed);
+    shot.spawnX = shot.x;
+    const componentId =
+      gauntlet.ammoComponentIds.length > 0
+        ? gauntlet.ammoComponentIds[
+            this.rng.int(0, gauntlet.ammoComponentIds.length - 1)
+          ]
+        : undefined;
+    shot.visual = createProjectileVisual(this, componentId, PROJECTILE_SIZE + 8);
+    shot.visual.setPosition(shot.x, shot.y);
+    shot.visual.setDepth(9);
+    this.tweens.add({
+      targets: shot.visual,
+      angle: -360,
+      duration: 650,
+      repeat: -1,
+    });
+
+    // Shots ignore every obstacle in their path — cover blocks are terrain,
+    // not a projectile shield. Only the player (below) or the world edge
+    // (updateEnemyShots) stops one.
+    this.physics.add.overlap(this.player, shot, () => {
+      this.removeEnemyShot(shot);
+      this.killPlayer();
+    });
+
+    this.enemyShots.push(shot);
+  }
+
+  private updateEnemyShots() {
+    for (const shot of [...this.enemyShots]) {
+      shot.visual.setPosition(shot.x, shot.y);
+      if (shot.x < -30) this.removeEnemyShot(shot);
+    }
+  }
+
+  private removeEnemyShot(shot: Projectile) {
+    const index = this.enemyShots.indexOf(shot);
+    if (index >= 0) this.enemyShots.splice(index, 1);
+    shot.visual.destroy(true);
+    shot.destroy();
   }
 
   // ---------------------------------------------------------------- skyfall
@@ -451,6 +663,112 @@ export class GameScene extends Phaser.Scene {
       delay: skyfall.intervalMs,
       loop: true,
       callback: () => this.spawnFaller(),
+    });
+    if (this.shelterRows.length > 0) {
+      const profile = SHELTER_MOVEMENT_PROFILES[this.spec.difficulty];
+      this.shelterTimer = this.time.addEvent({
+        delay: profile.cycleIntervalMs,
+        loop: true,
+        callback: () => this.shuffleShelters(profile),
+      });
+    }
+  }
+
+  /**
+   * Once per cycle, at most one shelter per row either slides to a new spot
+   * or briefly vanishes — difficulty controls how often and for how long.
+   * A shelter already mid-move/vanish, or already gone, sits this roll out.
+   */
+  private shuffleShelters(profile: ShelterMovementProfile) {
+    if (!this.started || this.completed) return;
+    for (const row of this.shelterRows) {
+      const index = this.rng.int(0, row.length - 1);
+      const shelter = row[index];
+      if (shelter.vanished || shelter.busy) continue;
+
+      const hasVisibleSibling = row.some(
+        (other) => other !== shelter && !other.vanished,
+      );
+      const canVanish = row.length === 1 || hasVisibleSibling;
+
+      if (canVanish && this.rng.next() < profile.vanishChance) {
+        this.vanishShelter(shelter, profile);
+      } else if (this.rng.next() < profile.moveChance) {
+        this.relocateShelter(shelter, row[index - 1], row[index + 1], profile);
+      }
+    }
+  }
+
+  /** Slides a shelter to a new spot, clamped between its row neighbours. */
+  private relocateShelter(
+    shelter: ShelterRuntime,
+    prev: ShelterRuntime | undefined,
+    next: ShelterRuntime | undefined,
+    profile: ShelterMovementProfile,
+  ) {
+    const rect = shelter.rect;
+    const halfWidth = rect.width / 2;
+    const leftBound = prev
+      ? prev.rect.x + prev.rect.width / 2 + MIN_SHELTER_GAP + halfWidth
+      : SKYFALL_SAFE_ZONE_X + EDGE_MARGIN + halfWidth;
+    const rightBound = next
+      ? next.rect.x - next.rect.width / 2 - MIN_SHELTER_GAP - halfWidth
+      : this.spec.world.width - EDGE_MARGIN - halfWidth;
+    if (rightBound <= leftBound) return;
+
+    const targetX = this.rng.int(Math.round(leftBound), Math.round(rightBound));
+    if (Math.abs(targetX - rect.x) < 12) return;
+
+    shelter.busy = true;
+    this.tweens.add({
+      targets: rect,
+      x: targetX,
+      duration: profile.tweenDurationMs,
+      ease: "Sine.easeInOut",
+      onUpdate: () => {
+        rect.body.updateFromGameObject();
+        syncEntityArt(rect);
+      },
+      onComplete: () => {
+        shelter.busy = false;
+      },
+    });
+  }
+
+  /** Fades a shelter out, drops it from `solids`, then restores it later. */
+  private vanishShelter(shelter: ShelterRuntime, profile: ShelterMovementProfile) {
+    shelter.busy = true;
+
+    this.tweens.add({
+      targets: shelter.rect.art,
+      alpha: 0,
+      duration: 260,
+      onComplete: () => {
+        shelter.vanished = true;
+        const solidIndex = this.solids.indexOf(shelter.rect);
+        if (solidIndex >= 0) this.solids.splice(solidIndex, 1);
+        this.time.delayedCall(profile.vanishDurationMs, () =>
+          this.reappearShelter(shelter),
+        );
+      },
+    });
+  }
+
+  private reappearShelter(shelter: ShelterRuntime) {
+    if (this.completed) {
+      shelter.busy = false;
+      return;
+    }
+    if (!this.solids.includes(shelter.rect)) this.solids.push(shelter.rect);
+    shelter.vanished = false;
+
+    this.tweens.add({
+      targets: shelter.rect.art,
+      alpha: 1,
+      duration: 260,
+      onComplete: () => {
+        shelter.busy = false;
+      },
     });
   }
 
@@ -502,6 +820,9 @@ export class GameScene extends Phaser.Scene {
       this.removeFaller(faller);
       this.killPlayer();
     });
+    // Platforms are shelter: falling objects smash on whatever they hit
+    // first, so ducking under level geometry is the survival strategy.
+    this.physics.add.collider(faller, this.solids, () => this.poofFaller(faller));
 
     this.fallers.push(faller);
   }
@@ -510,23 +831,63 @@ export class GameScene extends Phaser.Scene {
     for (const faller of [...this.fallers]) {
       faller.visual.setPosition(faller.x, faller.y);
       if (faller.y >= GROUND_TOP - 8) {
-        const poof = this.add.circle(
-          faller.x,
-          GROUND_TOP - 10,
-          6,
-          this.palette.backgroundAccent,
-          0.85,
-        );
-        poof.setDepth(6);
-        this.tweens.add({
-          targets: poof,
-          radius: 22,
-          alpha: 0,
-          duration: 240,
-          onComplete: () => poof.destroy(),
-        });
-        this.removeFaller(faller);
+        this.poofFaller(faller, GROUND_TOP - 10);
       }
+    }
+  }
+
+  private poofFaller(faller: Faller, atY?: number) {
+    if (!this.fallers.includes(faller)) return;
+    const poofY = atY ?? faller.y;
+    const poof = this.add.circle(
+      faller.x,
+      poofY,
+      6,
+      this.palette.backgroundAccent,
+      0.85,
+    );
+    poof.setDepth(6);
+    this.tweens.add({
+      targets: poof,
+      radius: 22,
+      alpha: 0,
+      duration: 240,
+      onComplete: () => poof.destroy(),
+    });
+    this.removeFaller(faller);
+    this.registerDodge(faller.x, poofY);
+  }
+
+  /** Dodge-storm scoring: every harmless smash counts while braving the storm. */
+  private registerDodge(x: number, y: number) {
+    const dodgeCount = this.spec.skyfall?.dodgeCount;
+    if (this.winCondition !== "dodge" || !dodgeCount) return;
+    if (!this.started || this.completed) return;
+    // Camping the spawn corner must not bank dodges for free.
+    if (this.player.x < SKYFALL_SAFE_ZONE_X) return;
+
+    this.avoided += 1;
+    this.emitHud();
+
+    const tally = this.add.text(x, y - 14, `+1`, {
+      fontFamily: "monospace",
+      fontSize: "16px",
+      color: this.palette.label,
+    });
+    tally.setOrigin(0.5, 0.5);
+    tally.setDepth(9);
+    this.tweens.add({
+      targets: tally,
+      y: tally.y - 30,
+      alpha: 0,
+      duration: 600,
+      ease: "Sine.easeOut",
+      onComplete: () => tally.destroy(),
+    });
+
+    if (this.avoided >= dodgeCount) {
+      this.flashMessage("STORM CLEARED");
+      this.time.delayedCall(400, () => this.finish());
     }
   }
 
@@ -544,6 +905,18 @@ export class GameScene extends Phaser.Scene {
     const rush = this.spec.rush;
     if (!rush || this.spec.mode !== "rush" || this.completed) return undefined;
     return Math.max(0, Math.round(rush.timeLimitSeconds * 1000 - this.elapsedMs));
+  }
+
+  /** Milliseconds left to survive in skyfall mode; 0 means the player won. */
+  private surviveLeftMs(): number | undefined {
+    const surviveSeconds = this.spec.skyfall?.surviveSeconds;
+    if (this.winCondition !== "survive" || !surviveSeconds || this.completed) {
+      return undefined;
+    }
+    return Math.max(
+      0,
+      Math.round(surviveSeconds * 1000 - this.surviveElapsedMs),
+    );
   }
 
   // ------------------------------------------------------------- objectives
@@ -564,7 +937,11 @@ export class GameScene extends Phaser.Scene {
       this.spec.mode === "rush" &&
       this.collected >= (this.spec.rush?.requiredCollectibles ?? Infinity)
     ) {
-      this.unlockGoal();
+      if (this.winCondition === "collect_all") {
+        this.finish();
+      } else {
+        this.unlockGoal();
+      }
     }
   }
 
@@ -642,6 +1019,15 @@ export class GameScene extends Phaser.Scene {
     const deathY = Math.round(this.player.y);
     respawnPlayer(this.player, this.spec);
     this.cameras.main.shake(120, 0.006);
+    // Dying repeatedly must not run out the storm for free.
+    if (this.winCondition === "survive" && this.surviveElapsedMs > 0) {
+      this.surviveElapsedMs = 0;
+      this.flashMessage("TIMER RESET");
+    }
+    if (this.winCondition === "dodge" && this.avoided > 0) {
+      this.avoided = 0;
+      this.flashMessage("STREAK RESET");
+    }
     this.emitHud();
     this.bus.emit("gameEvent", {
       type: "player_died",
@@ -658,6 +1044,7 @@ export class GameScene extends Phaser.Scene {
     this.completed = true;
     this.player.body.setVelocity(0, 0);
     this.skyfallTimer?.remove();
+    this.gauntletTimer?.remove();
     const result = {
       elapsedMs: Math.round(this.elapsedMs),
       deaths: this.deaths,
@@ -697,7 +1084,12 @@ export class GameScene extends Phaser.Scene {
           : undefined,
       totalTargets:
         this.spec.mode === "shooter" ? this.targets.length : undefined,
-      timeLeftMs: this.timeLeftMs(),
+      timeLeftMs: this.timeLeftMs() ?? this.surviveLeftMs(),
+      avoided: this.winCondition === "dodge" ? this.avoided : undefined,
+      dodgeTarget:
+        this.winCondition === "dodge"
+          ? this.spec.skyfall?.dodgeCount
+          : undefined,
       goalLocked: this.goalLocked,
     });
   }

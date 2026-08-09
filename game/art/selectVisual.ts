@@ -5,9 +5,10 @@ import {
   type GameEntitySpec,
 } from "@/game/types";
 import {
-  isSelectableEntityComponent,
-  selectComponentForEntity,
+  defaultComponentIndex,
+  type ComponentIndex,
 } from "@/game/components/selectComponent";
+import type { Rng } from "@/game/generation/rng";
 
 const WORD_SEPARATOR = /[^a-z0-9]+/g;
 
@@ -126,27 +127,39 @@ export function selectEntityVisualKind(entity: GameEntitySpec): EntityVisualKind
   }
 }
 
-export function resolveEntityVisual(entity: GameEntitySpec): EntityVisualSpec {
+export function resolveEntityVisual(
+  entity: GameEntitySpec,
+  index: ComponentIndex = defaultComponentIndex,
+  rng?: Rng,
+): EntityVisualSpec {
   const stored = entity.visual?.kind;
   const kind = isEntityVisualKind(stored)
     ? stored
     : selectEntityVisualKind(entity);
-  // Generated drone targets always use the built-in drawn art.
+  // Drone targets use the built-in drawn art unless a template pinned a
+  // photo-object sprite (the "shoot the flying photo props" treatment).
   if (entity.mechanic === "target") {
-    return { kind: "drone-target" };
+    const pinned = entity.visual?.componentId;
+    return index.isSelectableEntityComponent(pinned, "target")
+      ? { kind: "drone-target", componentId: pinned }
+      : { kind: "drone-target" };
   }
   const storedComponentId = entity.visual?.componentId;
   return {
     kind,
-    componentId: isSelectableEntityComponent(
+    componentId: index.isSelectableEntityComponent(
       storedComponentId,
       entity.mechanic,
     )
       ? storedComponentId
-      : selectComponentForEntity(entity, kind).id,
+      : index.selectComponentForEntity(entity, kind, rng).id,
   };
 }
 
-export function withResolvedVisual(entity: GameEntitySpec): GameEntitySpec {
-  return { ...entity, visual: resolveEntityVisual(entity) };
+export function withResolvedVisual(
+  entity: GameEntitySpec,
+  index: ComponentIndex = defaultComponentIndex,
+  rng?: Rng,
+): GameEntitySpec {
+  return { ...entity, visual: resolveEntityVisual(entity, index, rng) };
 }

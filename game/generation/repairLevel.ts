@@ -10,8 +10,9 @@ import {
   SAFE_MAX_UPWARD_DELTA,
   WORLD_WIDTH,
 } from "@/game/constants";
-import type { GameEntitySpec } from "@/game/types";
+import type { GameEntitySpec, Rect } from "@/game/types";
 import { clamp } from "./normalizeObjects";
+import { hasSafeLanding } from "./routeSafety";
 import {
   canJump,
   computeReachability,
@@ -78,7 +79,8 @@ export function repairLevel(input: GameEntitySpec[]): RepairResult {
         : best,
     );
 
-    const outcome = repairOne(entities, target, from, helperCount);
+    const hazards = entities.filter((entity) => entity.mechanic === "hazard");
+    const outcome = repairOne(entities, target, from, helperCount, hazards);
     if (outcome) {
       entities = outcome.entities;
       actions.push(outcome.action);
@@ -103,17 +105,42 @@ type SingleRepair = {
   addedHelper: boolean;
 };
 
+/**
+ * Repairs must never trade reachability for a lethal landing: a widened or
+ * moved platform whose surface ends up covered by a hazard is no repair at
+ * all, so those candidates are rejected here.
+ */
+function placementIsSafe(
+  entity: GameEntitySpec,
+  hazards: GameEntitySpec[],
+): boolean {
+  return (
+    !hazards.some((hazard) => rectsOverlap(entity.bounds, hazard.bounds, 12)) &&
+    hasSafeLanding(nodeOf(entity), hazards)
+  );
+}
+
+function rectsOverlap(a: Rect, b: Rect, pad = 0): boolean {
+  return (
+    a.x - pad < b.x + b.width &&
+    b.x - pad < a.x + a.width &&
+    a.y - pad < b.y + b.height &&
+    b.y - pad < a.y + a.height
+  );
+}
+
 function repairOne(
   entities: GameEntitySpec[],
   target: GameEntitySpec,
   from: PlatformNode,
   helperCount: number,
+  hazards: GameEntitySpec[],
 ): SingleRepair | undefined {
   const index = entities.findIndex((entity) => entity.id === target.id);
   if (index < 0) return undefined;
 
   const widened = widen(target, from);
-  if (widened) {
+  if (widened && placementIsSafe(widened.entity, hazards)) {
     const next = replace(entities, index, widened.entity);
     if (canJump(from, nodeOf(widened.entity))) {
       return { entities: next, action: widened.action, addedHelper: false };
@@ -121,7 +148,11 @@ function repairOne(
   }
 
   const moved = move(target, from);
-  if (moved && canJump(from, nodeOf(moved.entity))) {
+  if (
+    moved &&
+    placementIsSafe(moved.entity, hazards) &&
+    canJump(from, nodeOf(moved.entity))
+  ) {
     return {
       entities: replace(entities, index, moved.entity),
       action: moved.action,

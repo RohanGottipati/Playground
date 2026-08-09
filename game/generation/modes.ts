@@ -16,7 +16,10 @@ import type {
   SkyfallSpec,
 } from "@/game/types";
 import { resolveEntityVisual } from "@/game/art/selectVisual";
-import { selectComponentForEntity } from "@/game/components/selectComponent";
+import {
+  defaultComponentIndex,
+  type ComponentIndex,
+} from "@/game/components/selectComponent";
 import type { Pace } from "./hints";
 import { clamp, type NormalizedObject } from "./normalizeObjects";
 import type { Rng } from "./rng";
@@ -28,7 +31,7 @@ export type ModeApplication = {
   projectile?: ProjectileSpec;
   shooter?: ShooterSpec;
   skyfall?: SkyfallSpec;
-  /** Collectibles required to unlock the goal in rush mode. */
+  /** Collectibles the rush objective requires; the final pickup wins the run. */
   rushRequiredCollectibles?: number;
   actions: string[];
 };
@@ -71,11 +74,12 @@ function overlaps(a: Rect, b: Rect, pad = 0): boolean {
 }
 
 function componentIdForLabel(
+  componentIndex: ComponentIndex,
   label: string,
   fallback: string | undefined,
 ): string | undefined {
   try {
-    return selectComponentForEntity(
+    return componentIndex.selectComponentForEntity(
       {
         id: `probe-${label}`,
         sourceLabel: label,
@@ -93,6 +97,7 @@ function componentIdForLabel(
 function pickAmmo(
   rng: Rng,
   objects: NormalizedObject[],
+  componentIndex: ComponentIndex,
 ): { label: string; componentId?: string } {
   const candidates = objects.filter((object) => {
     const noun = nounOf(object.label);
@@ -106,7 +111,10 @@ function pickAmmo(
   if (candidates.length > 0) {
     const chosen = rng.pick(candidates);
     const label = nounOf(chosen.label);
-    return { label, componentId: componentIdForLabel(chosen.label, "food-donut") };
+    return {
+      label,
+      componentId: componentIdForLabel(componentIndex, chosen.label, "food-donut"),
+    };
   }
   return { label: "donut", componentId: "food-donut" };
 }
@@ -126,11 +134,10 @@ function placeTargets(
   entities: GameEntitySpec[],
   reachability: ReachabilityResult,
   count: number,
-  goal: GameEntitySpec | undefined,
   actions: string[],
 ): GameEntitySpec[] {
-  // Drones kill on contact, so they only hover over wide surfaces where the
-  // player has room to stop and shoot instead of landing into them.
+  // Drones shove the player back on contact, so they only hover over wide
+  // surfaces where the player has room to stop and shoot before closing in.
   const nodes = reachableNodes(reachability).filter(
     (node) => node.mechanic === "ground" || node.right - node.left >= 220,
   );
@@ -160,7 +167,6 @@ function placeTargets(
       };
       const collides =
         blockers.some((entity) => overlaps(candidate, entity.bounds, 14)) ||
-        (goal ? overlaps(candidate, goal.bounds, 60) : false) ||
         placed.some((target) => overlaps(candidate, target.bounds, 90));
       if (!collides) position = candidate;
     }
@@ -242,12 +248,13 @@ function buildSkyfall(
   rng: Rng,
   entities: GameEntitySpec[],
   pace: Pace,
+  componentIndex: ComponentIndex,
 ): SkyfallSpec {
   const sourced = entities.filter((entity) => entity.sourceLabel);
   const componentIds = [
     ...new Set(
       sourced
-        .map((entity) => resolveEntityVisual(entity).componentId)
+        .map((entity) => resolveEntityVisual(entity, componentIndex).componentId)
         .filter((id): id is string => Boolean(id)),
     ),
   ].slice(0, 4);
@@ -256,10 +263,18 @@ function buildSkyfall(
     nounOf(sourced.length > 0 ? rng.pick(sourced).sourceLabel ?? "object" : "object"),
   );
 
-  const tuning: Record<Pace, { intervalMs: number; fallSpeed: number; maxConcurrent: number }> = {
-    gentle: { intervalMs: 2400, fallSpeed: 190, maxConcurrent: 3 },
-    standard: { intervalMs: 1700, fallSpeed: 240, maxConcurrent: 4 },
-    spicy: { intervalMs: 1150, fallSpeed: 300, maxConcurrent: SKYFALL_MAX_CONCURRENT },
+  const tuning: Record<
+    Pace,
+    { intervalMs: number; fallSpeed: number; maxConcurrent: number; surviveSeconds: number }
+  > = {
+    gentle: { intervalMs: 2400, fallSpeed: 190, maxConcurrent: 3, surviveSeconds: 20 },
+    standard: { intervalMs: 1700, fallSpeed: 240, maxConcurrent: 4, surviveSeconds: 30 },
+    spicy: {
+      intervalMs: 1150,
+      fallSpeed: 300,
+      maxConcurrent: SKYFALL_MAX_CONCURRENT,
+      surviveSeconds: 40,
+    },
   };
   const base = tuning[pace];
   const jitter = 1 + (rng.next() - 0.5) * 0.3;
@@ -270,13 +285,15 @@ function buildSkyfall(
     fallSpeed: Math.round(base.fallSpeed * (2 - jitter)),
     maxConcurrent: base.maxConcurrent,
     componentIds,
+    surviveSeconds: base.surviveSeconds,
   };
 }
 
 /**
  * Mutates a validated, reachable level into this run's game mode. Only adds
  * floating entities or configuration — never moves platforms — so the
- * already-validated route to the goal stays intact.
+ * already-validated routes stay intact. Runs before goal placement: only the
+ * classic mode (including degradations back to it) gets an exit door at all.
  */
 export function applyGameMode(
   mode: GameMode,
@@ -285,9 +302,9 @@ export function applyGameMode(
   rng: Rng,
   pace: Pace,
   reachability: ReachabilityResult,
+  componentIndex: ComponentIndex = defaultComponentIndex,
 ): ModeApplication {
   const actions: string[] = [];
-  const goal = entities.find((entity) => entity.mechanic === "goal");
 
   switch (mode) {
     case "shooter": {
@@ -297,7 +314,6 @@ export function applyGameMode(
         entities,
         reachability,
         targetCount,
-        goal,
         actions,
       );
       const placedCount = withTargets.filter(
@@ -308,7 +324,7 @@ export function applyGameMode(
         actions.push("No space for drone targets; fell back to classic mode");
         return { entities, canShoot: false, actions };
       }
-      const ammo = pickAmmo(rng, objects);
+      const ammo = pickAmmo(rng, objects, componentIndex);
       return {
         entities: withTargets,
         canShoot: true,
@@ -328,7 +344,7 @@ export function applyGameMode(
       return {
         entities,
         canShoot: false,
-        skyfall: buildSkyfall(rng, entities, pace),
+        skyfall: buildSkyfall(rng, entities, pace, componentIndex),
         actions,
       };
 

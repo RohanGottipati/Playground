@@ -28,7 +28,13 @@ export const GOAL_HEIGHT = 80;
 export const TARGET_SIZE = 46;
 export const PROJECTILE_SPEED = 640;
 export const PROJECTILE_COOLDOWN_MS = 320;
-export const PROJECTILE_MAX_RANGE = 620;
+/**
+ * Player shots fly the full width of the level and pass through platforms,
+ * hazards and scenery alike — nothing but a drone stops one. A shorter range
+ * made distant drones look unhittable, as if the shot had struck the geometry
+ * in front of them.
+ */
+export const PROJECTILE_MAX_RANGE = WORLD_WIDTH;
 export const PROJECTILE_SIZE = 22;
 
 export const SKYFALL_MIN_INTERVAL_MS = 900;

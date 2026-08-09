@@ -3,6 +3,7 @@ import { AppError } from "@/lib/errors/AppError";
 import { normalizeObjectLabel } from "@/lib/utils/sanitize";
 import { EMPTY_HINTS, type GenerationHints } from "@/game/generation/hints";
 import { ACTIVE_SESSION_EVENT_TYPES, TICKER_EVENT_TYPES } from "./types";
+import type { ComponentCatalogEntry } from "@/game/components/types";
 import type {
   ArcadeSort,
   GameEventRecord,
@@ -464,6 +465,11 @@ export class MemoryRepository implements Repository {
     }
   }
 
+  async getEnabledComponentCatalog(): Promise<ComponentCatalogEntry[] | null> {
+    // Memory mode has no component table; callers use the bundled catalog.
+    return null;
+  }
+
   async getGenerationHints(): Promise<GenerationHints> {
     const store = state();
     const recent = [...store.insights].reverse().slice(0, 12);
@@ -473,6 +479,12 @@ export class MemoryRepository implements Repository {
     for (const game of store.games.values()) {
       modeByGame.set(game.id, game.gameSpec.mode ?? "classic");
     }
+
+    // Newest first, so this doubles as the template-repeat history.
+    const recentTemplates = [...store.games.values()]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((game) => game.gameSpec.templateId)
+      .filter((template): template is string => Boolean(template));
 
     const stats = new Map<string, { plays: number; completions: number }>();
     for (const session of store.sessions.values()) {
@@ -486,6 +498,7 @@ export class MemoryRepository implements Repository {
 
     return {
       recentModes: recent.map((insight) => insight.mode),
+      recentTemplates,
       recentTitles: recent.map((insight) => insight.title),
       modeStats: [...stats.entries()].map(([mode, entry]) => ({
         mode,
@@ -511,6 +524,15 @@ export function sortSummaries(
 ): GameSummary[] {
   const copy = [...summaries];
   switch (sort) {
+    case "campaign":
+      // Difficulty ascending, with stable tiebreaks so reseeding (which
+      // rewrites published_at) never reshuffles the campaign.
+      return copy.sort(
+        (a, b) =>
+          a.difficulty - b.difficulty ||
+          (a.publishedAt ?? "").localeCompare(b.publishedAt ?? "") ||
+          a.slug.localeCompare(b.slug),
+      );
     case "trending":
       return copy.sort((a, b) => trendingScore(b) - trendingScore(a));
     case "hardest":
