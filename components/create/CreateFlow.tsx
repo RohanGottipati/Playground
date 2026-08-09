@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { GamePlayer } from "@/components/game/GamePlayer";
 import { DifficultyBadge, ModeBadge } from "@/components/ui/Badge";
@@ -10,6 +10,10 @@ import type { GameSpec } from "@/game/types";
 import { CameraCapture } from "./CameraCapture";
 import { GenerationProgress, type GenerationStep } from "./GenerationProgress";
 import { PublishPanel } from "./PublishPanel";
+import {
+  RemoteCapturePanel,
+  type RemoteCaptureState,
+} from "./RemoteCapturePanel";
 import { ScanAnimation } from "./ScanAnimation";
 
 type GenerateResponse = {
@@ -42,6 +46,27 @@ type ApiErrorBody = {
 type FlowError = {
   message: string;
   retryable: boolean;
+};
+
+type Preview = { url: string; localObjectUrl: boolean };
+
+type RemoteCaptureSession = {
+  captureUrl: string;
+  statusToken: string;
+  expiresAt: string;
+  state: RemoteCaptureState;
+  error?: string | null;
+};
+
+type CaptureSessionResponse = ApiErrorBody & {
+  capturePath?: string;
+  statusToken?: string;
+  expiresAt?: string;
+};
+
+type CaptureStatusResponse = ApiErrorBody & {
+  status?: "pending" | "expired" | "cancelled" | "ready";
+  upload?: UploadResult;
 };
 
 type Phase = "capture" | "working" | "failed" | "ready";
@@ -83,22 +108,59 @@ function flowError(cause: unknown): FlowError {
 export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
   const [phase, setPhase] = useState<Phase>("capture");
   const [step, setStep] = useState<GenerationStep>("upload");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [preview, setPreview] = useState<Preview | null>(null);
   const [uploaded, setUploaded] = useState<UploadResult | null>(null);
   const [result, setResult] = useState<GenerateResponse | null>(null);
   const [error, setError] = useState<FlowError | null>(null);
+  const [remoteSession, setRemoteSession] =
+    useState<RemoteCaptureSession | null>(null);
+  const [remoteLoading, setRemoteLoading] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
+  const remoteTokenRef = useRef<string | null>(null);
+  const handledRemoteRef = useRef<string | null>(null);
+  const previewUrl = preview?.url ?? null;
+
+  const replacePreview = useCallback((next: Preview | null) => {
+    setPreview((current) => {
+      if (current?.localObjectUrl) URL.revokeObjectURL(current.url);
+      return next;
+    });
+  }, []);
+
+  const disposeRemoteSession = useCallback((statusToken: string) => {
+    void fetch("/api/capture-sessions/status", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${statusToken}` },
+      keepalive: true,
+    }).catch(() => undefined);
+  }, []);
+
+  const cancelRemoteCapture = useCallback(() => {
+    const statusToken = remoteTokenRef.current;
+    remoteTokenRef.current = null;
+    handledRemoteRef.current = null;
+    setRemoteSession(null);
+    setCaptureError(null);
+    if (statusToken) disposeRemoteSession(statusToken);
+  }, [disposeRemoteSession]);
+
+  useEffect(
+    () => () => {
+      const statusToken = remoteTokenRef.current;
+      if (statusToken) disposeRemoteSession(statusToken);
+    },
+    [disposeRemoteSession],
+  );
 
   const reset = useCallback(() => {
+    cancelRemoteCapture();
     setPhase("capture");
     setStep("upload");
     setUploaded(null);
     setResult(null);
     setError(null);
-    setPreviewUrl((current) => {
-      if (current) URL.revokeObjectURL(current);
-      return null;
-    });
-  }, []);
+    replacePreview(null);
+  }, [cancelRemoteCapture, replacePreview]);
 
   const generateUploaded = useCallback(
     async (upload: UploadResult) => {
@@ -142,16 +204,14 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
 
   const handleSelect = useCallback(
     async (file: File) => {
+      cancelRemoteCapture();
       setError(null);
       setResult(null);
       setUploaded(null);
       setPhase("working");
       setStep("upload");
       const localUrl = URL.createObjectURL(file);
-      setPreviewUrl((current) => {
-        if (current) URL.revokeObjectURL(current);
-        return localUrl;
-      });
+      replacePreview({ url: localUrl, localObjectUrl: true });
 
       try {
         const compressed = await compressImage(file);
@@ -189,8 +249,153 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
         setPhase("failed");
       }
     },
-    [generateUploaded],
+    [cancelRemoteCapture, generateUploaded, replacePreview],
   );
+
+  const processRemoteUpload = useCallback(
+    async (upload: UploadResult) => {
+      setError(null);
+      setResult(null);
+      setUploaded(upload);
+      setPhase("working");
+      setStep("upload");
+      replacePreview({ url: upload.imageUrl, localObjectUrl: false });
+      try {
+        await generateUploaded(upload);
+      } catch (cause) {
+        console.error("remote create flow failed", cause);
+        setError(flowError(cause));
+        setPhase("failed");
+      }
+    },
+    [generateUploaded, replacePreview],
+  );
+
+  const startRemoteCapture = useCallback(async () => {
+    const previousToken = remoteTokenRef.current;
+    if (previousToken) disposeRemoteSession(previousToken);
+    remoteTokenRef.current = null;
+    handledRemoteRef.current = null;
+    setRemoteSession(null);
+    setCaptureError(null);
+    setRemoteLoading(true);
+    try {
+      const response = await fetch("/api/capture-sessions", { method: "POST" });
+      const body = (await response.json()) as CaptureSessionResponse;
+      if (
+        !response.ok ||
+        !body.capturePath ||
+        !body.statusToken ||
+        !body.expiresAt
+      ) {
+        throw requestError(
+          body,
+          "We could not create a phone capture link.",
+          response.status >= 500 || response.status === 429,
+        );
+      }
+      const session: RemoteCaptureSession = {
+        captureUrl: new URL(body.capturePath, window.location.origin).toString(),
+        statusToken: body.statusToken,
+        expiresAt: body.expiresAt,
+        state: "waiting",
+      };
+      remoteTokenRef.current = session.statusToken;
+      setRemoteSession(session);
+    } catch (cause) {
+      setCaptureError(flowError(cause).message);
+    } finally {
+      setRemoteLoading(false);
+    }
+  }, [disposeRemoteSession]);
+
+  useEffect(() => {
+    if (!remoteSession || remoteSession.state !== "waiting") return;
+    const { statusToken, expiresAt } = remoteSession;
+    let stopped = false;
+    let timer: number | undefined;
+    let controller: AbortController | undefined;
+    let failures = 0;
+
+    const schedule = (delay: number) => {
+      if (!stopped) timer = window.setTimeout(() => void poll(), delay);
+    };
+
+    const poll = async () => {
+      if (stopped) return;
+      if (Date.now() >= new Date(expiresAt).getTime()) {
+        setRemoteSession((current) =>
+          current?.statusToken === statusToken
+            ? { ...current, state: "expired" }
+            : current,
+        );
+        return;
+      }
+
+      controller = new AbortController();
+      try {
+        const response = await fetch("/api/capture-sessions/status", {
+          headers: { Authorization: `Bearer ${statusToken}` },
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const body = (await response.json()) as CaptureStatusResponse;
+        if (!response.ok) {
+          throw requestError(
+            body,
+            "We lost the phone connection.",
+            response.status >= 500 || response.status === 429,
+          );
+        }
+
+        failures = 0;
+        if (body.status === "ready" && body.upload) {
+          if (handledRemoteRef.current === statusToken) return;
+          handledRemoteRef.current = statusToken;
+          remoteTokenRef.current = null;
+          setRemoteSession(null);
+          disposeRemoteSession(statusToken);
+          void processRemoteUpload(body.upload);
+          return;
+        }
+        if (body.status === "expired" || body.status === "cancelled") {
+          setRemoteSession((current) =>
+            current?.statusToken === statusToken
+              ? {
+                  ...current,
+                  state: body.status === "expired" ? "expired" : "error",
+                  error:
+                    body.status === "cancelled"
+                      ? "This phone capture was cancelled."
+                      : undefined,
+                }
+              : current,
+          );
+          return;
+        }
+        schedule(1500);
+      } catch (cause) {
+        if (controller.signal.aborted) return;
+        failures += 1;
+        if (failures >= 3) {
+          setRemoteSession((current) =>
+            current?.statusToken === statusToken
+              ? { ...current, state: "error", error: flowError(cause).message }
+              : current,
+          );
+          return;
+        }
+        schedule(3000);
+      }
+    };
+
+    void poll();
+    return () => {
+      stopped = true;
+      if (timer) window.clearTimeout(timer);
+      controller?.abort();
+    };
+  }, [disposeRemoteSession, processRemoteUpload, remoteSession]);
 
   const retryAnalysis = useCallback(async () => {
     if (!uploaded) return;
@@ -215,7 +420,27 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
             each object fully visible with clear space around it so its shape
             and position can become part of the level.
           </p>
-          <CameraCapture onSelect={handleSelect} />
+          {remoteSession ? (
+            <RemoteCapturePanel
+              captureUrl={remoteSession.captureUrl}
+              expiresAt={remoteSession.expiresAt}
+              state={remoteSession.state}
+              error={remoteSession.error}
+              onCancel={cancelRemoteCapture}
+              onRegenerate={() => void startRemoteCapture()}
+            />
+          ) : null}
+          {captureError ? (
+            <p className="font-mono text-xs text-marquee" role="alert">
+              {captureError}
+            </p>
+          ) : null}
+          <CameraCapture
+            onSelect={handleSelect}
+            onRemoteCapture={() => void startRemoteCapture()}
+            remoteLoading={remoteLoading}
+            showTakeButton={!remoteSession}
+          />
         </div>
       ) : null}
 
