@@ -159,6 +159,7 @@ export default async function GamePage({ params }: Props) {
           slug={slug}
           spec={spec}
           sourceImageUrl={game.sourceImageUrl}
+          detectedObjectCount={game.detectedObjectCount}
         />
         <div className="space-y-6">
           <LeaderboardPanel leaderboard={leaderboard} />

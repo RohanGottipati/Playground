@@ -10,6 +10,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeObjectLabel } from "@/lib/utils/sanitize";
 import { logDiagnostic } from "@/lib/utils/logger";
 import { sortSummaries } from "./memory";
+import { ACTIVE_SESSION_EVENT_TYPES, TICKER_EVENT_TYPES } from "./types";
 import type {
   ArcadeSort,
   GameObjectRecord,
@@ -24,7 +25,10 @@ import type {
   Repository,
   SaveDraftInput,
   SessionUpdate,
+  SpatialEventRecord,
   StatsSnapshot,
+  TelemetrySnapshot,
+  TickerEventType,
 } from "./types";
 
 type GameRow = {
@@ -546,6 +550,104 @@ export class SupabaseRepository implements Repository {
           discoveredAt: String(row.discovered_at),
         }),
       ),
+    };
+  }
+
+  async getTelemetrySnapshot(gameId?: string): Promise<TelemetrySnapshot> {
+    const client = this.client;
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60_000).toISOString();
+
+    let deathQuery = client
+      .from("game_events")
+      .select("game_id")
+      .eq("event_type", "death")
+      .limit(2000);
+    let recentQuery = client
+      .from("game_events")
+      .select("game_id, event_type, event_payload, created_at, games(title)")
+      .in("event_type", TICKER_EVENT_TYPES)
+      .order("created_at", { ascending: false })
+      .limit(300);
+    // Active sessions: distinct session_ids seen on a start/progress/complete
+    // event in the last 5 minutes. Deliberately excludes every other event
+    // type (deaths, likes, opens, ...) — those must never move this count.
+    let activeQuery = client
+      .from("game_events")
+      .select("game_id, session_id")
+      .in("event_type", ACTIVE_SESSION_EVENT_TYPES)
+      .not("session_id", "is", null)
+      .gte("created_at", fiveMinutesAgo)
+      .limit(5000);
+
+    if (gameId) {
+      deathQuery = deathQuery.eq("game_id", gameId);
+      recentQuery = recentQuery.eq("game_id", gameId);
+      activeQuery = activeQuery.eq("game_id", gameId);
+    }
+
+    const [deathRows, recentRows, activeRows] = await Promise.all([
+      deathQuery,
+      recentQuery,
+      activeQuery,
+    ]);
+
+    if (deathRows.error) fail("getTelemetrySnapshot.deaths", deathRows.error);
+    if (recentRows.error) fail("getTelemetrySnapshot.recent", recentRows.error);
+    if (activeRows.error) fail("getTelemetrySnapshot.active", activeRows.error);
+
+    const deathTotalsByGame: Record<string, number> = {};
+    for (const row of (deathRows.data ?? []) as { game_id: string }[]) {
+      deathTotalsByGame[row.game_id] = (deathTotalsByGame[row.game_id] ?? 0) + 1;
+    }
+
+    const activeSessionSets = new Map<string, Set<string>>();
+    for (const row of (activeRows.data ?? []) as {
+      game_id: string;
+      session_id: string | null;
+    }[]) {
+      if (!row.session_id) continue;
+      const set = activeSessionSets.get(row.game_id) ?? new Set<string>();
+      set.add(row.session_id);
+      activeSessionSets.set(row.game_id, set);
+    }
+    const activeSessionsByGame: Record<string, number> = {};
+    for (const [gid, sessions] of activeSessionSets) {
+      activeSessionsByGame[gid] = sessions.size;
+    }
+
+    type RecentRow = {
+      game_id: string;
+      event_type: TickerEventType;
+      event_payload: Record<string, unknown>;
+      created_at: string;
+      games: { title: string } | { title: string }[] | null;
+    };
+
+    const recentSpatialEvents: SpatialEventRecord[] = (
+      (recentRows.data ?? []) as RecentRow[]
+    ).map((row) => {
+      const gameTitleSource = Array.isArray(row.games) ? row.games[0] : row.games;
+      const payload = row.event_payload ?? {};
+      const x = typeof payload.x === "number" ? payload.x : null;
+      const y = typeof payload.y === "number" ? payload.y : null;
+      const durationSeconds =
+        typeof payload.durationSeconds === "number" ? payload.durationSeconds : null;
+      return {
+        gameId: row.game_id,
+        gameTitle: gameTitleSource?.title ?? "Untitled",
+        eventType: row.event_type,
+        city: typeof payload.city === "string" ? payload.city : "Toronto",
+        x,
+        y,
+        durationSeconds,
+        createdAt: row.created_at,
+      };
+    });
+
+    return {
+      deathTotalsByGame,
+      activeSessionsByGame,
+      recentSpatialEvents,
     };
   }
 

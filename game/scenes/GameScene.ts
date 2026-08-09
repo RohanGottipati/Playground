@@ -1015,6 +1015,8 @@ export class GameScene extends Phaser.Scene {
   private killPlayer() {
     if (this.completed) return;
     this.deaths += 1;
+    const deathX = Math.round(this.player.x);
+    const deathY = Math.round(this.player.y);
     respawnPlayer(this.player, this.spec);
     this.cameras.main.shake(120, 0.006);
     // Dying repeatedly must not run out the storm for free.
@@ -1030,8 +1032,8 @@ export class GameScene extends Phaser.Scene {
     this.bus.emit("gameEvent", {
       type: "player_died",
       payload: {
-        x: Math.round(this.player.x),
-        y: Math.round(this.player.y),
+        x: deathX,
+        y: deathY,
         elapsedMs: Math.round(this.elapsedMs),
       },
     });
@@ -1053,7 +1055,12 @@ export class GameScene extends Phaser.Scene {
     this.bus.emit("completed", result);
     this.bus.emit("gameEvent", {
       type: "game_completed",
-      payload: { elapsedMs: result.elapsedMs, deaths: result.deaths },
+      payload: {
+        elapsedMs: result.elapsedMs,
+        deaths: result.deaths,
+        x: Math.round(this.player.x),
+        y: Math.round(this.player.y),
+      },
     });
     this.scene.launch("ResultScene", result);
     this.scene.pause();

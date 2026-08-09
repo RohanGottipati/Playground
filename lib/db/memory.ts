@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { AppError } from "@/lib/errors/AppError";
 import { normalizeObjectLabel } from "@/lib/utils/sanitize";
 import { EMPTY_HINTS, type GenerationHints } from "@/game/generation/hints";
+import { ACTIVE_SESSION_EVENT_TYPES, TICKER_EVENT_TYPES } from "./types";
 import type { ComponentCatalogEntry } from "@/game/components/types";
 import type {
   ArcadeSort,
@@ -18,7 +19,10 @@ import type {
   Repository,
   SaveDraftInput,
   SessionUpdate,
+  SpatialEventRecord,
   StatsSnapshot,
+  TelemetrySnapshot,
+  TickerEventType,
 } from "./types";
 
 type StoredInsight = GenerationInsightInput & { createdAt: string };
@@ -347,6 +351,63 @@ export class MemoryRepository implements Repository {
         b.discoveredAt.localeCompare(a.discoveredAt),
       ),
     };
+  }
+
+  async getTelemetrySnapshot(gameId?: string): Promise<TelemetrySnapshot> {
+    const store = state();
+    const fiveMinutesAgo = Date.now() - 5 * 60_000;
+    const scopedEvents = gameId
+      ? store.events.filter((event) => event.gameId === gameId)
+      : store.events;
+
+    const deathTotalsByGame: Record<string, number> = {};
+    for (const event of scopedEvents) {
+      if (event.eventType !== "death") continue;
+      deathTotalsByGame[event.gameId] = (deathTotalsByGame[event.gameId] ?? 0) + 1;
+    }
+
+    // Active sessions: distinct session_ids seen on a start/progress/complete
+    // event in the last 5 minutes. Deliberately excludes every other event
+    // type (deaths, likes, ...) — those must never move this count.
+    const activeSessionSets = new Map<string, Set<string>>();
+    for (const event of scopedEvents) {
+      if (!event.sessionId) continue;
+      if (!ACTIVE_SESSION_EVENT_TYPES.includes(event.eventType)) continue;
+      if (new Date(event.createdAt).getTime() < fiveMinutesAgo) continue;
+      const set = activeSessionSets.get(event.gameId) ?? new Set<string>();
+      set.add(event.sessionId);
+      activeSessionSets.set(event.gameId, set);
+    }
+    const activeSessionsByGame: Record<string, number> = {};
+    for (const [gid, sessions] of activeSessionSets) {
+      activeSessionsByGame[gid] = sessions.size;
+    }
+
+    const recentSpatialEvents: SpatialEventRecord[] = scopedEvents
+      .filter((event): event is typeof event & { eventType: TickerEventType } =>
+        TICKER_EVENT_TYPES.includes(event.eventType as TickerEventType),
+      )
+      .slice(-300)
+      .reverse()
+      .map((event) => {
+        const payload = event.eventPayload;
+        const x = typeof payload.x === "number" ? payload.x : null;
+        const y = typeof payload.y === "number" ? payload.y : null;
+        const durationSeconds =
+          typeof payload.durationSeconds === "number" ? payload.durationSeconds : null;
+        return {
+          gameId: event.gameId,
+          gameTitle: store.games.get(event.gameId)?.title ?? "Untitled",
+          eventType: event.eventType,
+          city: typeof payload.city === "string" ? payload.city : "Toronto",
+          x,
+          y,
+          durationSeconds,
+          createdAt: event.createdAt,
+        };
+      });
+
+    return { deathTotalsByGame, activeSessionsByGame, recentSpatialEvents };
   }
 
   async toggleLike(gameId: string, anonymousSessionId: string): Promise<number> {

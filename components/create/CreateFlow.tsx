@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { GamePlayer } from "@/components/game/GamePlayer";
 import { DifficultyBadge, ModeBadge } from "@/components/ui/Badge";
+import { addUserObjectsScanned } from "@/lib/analytics/objectsScanned";
 import { compressImage } from "@/lib/utils/imageCompression";
 import type { SceneAnalysis } from "@/lib/backboard/schemas";
 import type { GameSpec } from "@/game/types";
@@ -195,6 +196,7 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
 
       setStep("build");
       setResult(generated);
+      addUserObjectsScanned(generated.gameSpec.source.detectedObjectCount);
       setStep("validate");
       setStep("done");
       setPhase("ready");
