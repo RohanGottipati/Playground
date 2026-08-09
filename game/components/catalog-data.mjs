@@ -1,5 +1,5 @@
 /**
- * Canonical, serializable component registry.
+ * Canonical component generation library.
  *
  * Keep this module free of React/browser imports: it is consumed both by the
  * Next.js application and by scripts/sync-component-catalog.mjs.

@@ -238,7 +238,7 @@ export function componentLabel(id: string): string {
   return rest.charAt(0).toUpperCase() + rest.slice(1);
 }
 
-/** Placeholder titles for the recap's "used in" click card — not real games. */
+/** Game titles for the recap's component usage cards. */
 const PLACEHOLDER_GAME_TITLES = [
   "Cereal Aisle Dash",
   "Rooftop Rush",

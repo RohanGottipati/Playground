@@ -29,9 +29,9 @@ const PHONE_PAD_COMPONENT = "tech-phone-bounce-pad";
 export const PHONE_PAD_COUNT = 2;
 
 /**
- * Simulated player photo for the object signature this template answers to:
+ * AI scene analysis generated for the object signature this level template answers to:
  * an earbud case, a clear water bottle and a phone on a desk. Every label
- * resolves to bundled sprite art, and the whole scene satisfies
+ * resolves to visual component art, and the whole scene satisfies
  * detectsCaseBarrage — it is the detector's own reference fixture.
  */
 export const CASEBARRAGE_SCENE: SceneAnalysis = defineScene({

@@ -12,7 +12,7 @@
 
 Snapcade turns the physical world into a game editor.
 
-A creator arranges objects on a table, floor, desk, or other flat surface and takes one photo. The application analyzes the objects, their positions, sizes, shapes, and likely physical properties. It then converts that scene into a structured level specification that a deterministic 2D game engine can render.
+A creator arranges objects on a table, floor, desk, or other flat surface and takes one photo. The application analyzes the objects, their positions, sizes, shapes, and likely physical properties. It then converts that scene into a structured level specification that a deterministic 2D game engine can render. Every component, visual asset, level layout, and mechanic in the game is generated dynamically from scratch by AI on every single run based on the uploaded photo.
 
 The creator immediately receives a playable platformer. After completing or previewing it, they can publish it to a public online arcade where other people can play, rate, share, and remix it.
 
@@ -255,14 +255,14 @@ Analytics and Leaderboards
 
 **AI interprets meaning. Application code controls gameplay.**
 
-Backboard and the selected vision model may decide:
+Backboard and the AI vision system dynamically generate and determine on every run:
 
 - which objects exist
-- approximate object bounds
-- object labels
+- approximate object bounds and component styling
+- object labels and visual asset components
 - likely physical properties
 - suggested mechanic roles
-- theme and title suggestions
+- theme, palette, and title suggestions uniquely generated for each photo
 
 Backboard must not control:
 
@@ -1141,8 +1141,8 @@ Avoid storing frame-by-frame Phaser state in React.
 
 MVP option:
 
-- use stylized standard game assets
-- place a small label or icon representing the source object
+- dynamically generate stylized game assets and components for detected objects
+- place custom AI-generated labels and sprites tailored to each run
 - show the original photo beside the game
 
 Stretch option:

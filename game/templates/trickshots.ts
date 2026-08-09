@@ -19,7 +19,7 @@ import {
 import { defineScene } from "./fixtures";
 import type { TemplateSkin } from "./skin";
 
-/** Simulated player photo: a gym bag emptied onto the garage floor. */
+/** Photographed object scene analysis: a gym bag emptied onto the garage floor. */
 export const TRICKSHOTS_SCENE: SceneAnalysis = defineScene({
   idPrefix: "trickshots",
   sceneType: "floor",

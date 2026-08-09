@@ -280,14 +280,14 @@ export function assertChainJumpable(
   }
 }
 
-/** Cycles the photo's labels across a template's fixed slots. */
+/** Cycles the photo's labels across the generated level slots. */
 export function labelCycler(labels: readonly string[]): (slot: number) => string {
   const pool = labels.length > 0 ? labels : ["object"];
   return (slot) => pool[slot % pool.length];
 }
 
 /**
- * Resolves every entity's visual against the bundled component files with a
+ * Resolves every entity's visual against the AI component system with a
  * per-entity seeded rng: deterministic for a stored seed, varied across runs.
  */
 export function resolveTemplateVisuals(

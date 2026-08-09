@@ -1,9 +1,8 @@
 import type { DetectedObject, SceneAnalysis } from "@/lib/backboard/schemas";
 
 /**
- * Shorthand for the hand-written "player photo" analyses each template is
- * seeded into the arcade with. Labels must alias-resolve to bundled object
- * sprites so every slot renders real Magic Patterns art (tests enforce it).
+ * Shorthand for the AI "player photo" scene analyses generated for each level.
+ * Labels resolve to visual components so every slot renders rich visual art.
  */
 export type SceneObjectInput = {
   label: string;

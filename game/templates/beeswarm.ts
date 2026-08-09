@@ -15,7 +15,7 @@ import {
 import { defineScene } from "./fixtures";
 import type { TemplateSkin } from "./skin";
 
-/** Simulated player photo: a backyard garden bed, bees very much awake. */
+/** Photographed object scene analysis: a backyard garden bed, bees very much awake. */
 export const BEESWARM_SCENE: SceneAnalysis = defineScene({
   idPrefix: "beeswarm",
   sceneType: "mixed",

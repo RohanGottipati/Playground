@@ -18,7 +18,7 @@ import {
 import { defineScene } from "./fixtures";
 import type { TemplateSkin } from "./skin";
 
-/** Simulated player photo: a garage pegboard mid-project. */
+/** Photographed object scene analysis: a garage pegboard mid-project. */
 export const TOOLRANGE_SCENE: SceneAnalysis = defineScene({
   idPrefix: "toolrange",
   sceneType: "mixed",

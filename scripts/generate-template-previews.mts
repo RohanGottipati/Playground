@@ -1,6 +1,6 @@
 /**
  * Writes the arcade cover art for every campaign game. Each cover is composed
- * from the same Magic Patterns sprites the level renders, so a card's photo
+ * from the visual components the level renders, so a card's photo
  * always matches the game behind it.
  *
  *   npm run previews:generate

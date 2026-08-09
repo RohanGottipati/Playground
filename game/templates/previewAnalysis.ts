@@ -1,9 +1,9 @@
 import type { SceneAnalysis } from "@/lib/backboard/schemas";
 
 /**
- * Showcase analysis used to seed the arcade preview games: a kitchen-counter
- * scene whose labels all resolve to exact bundled object sprites, so every
- * template slot renders real Magic Patterns art.
+ * Showcase scene analysis generated for arcade preview games: a kitchen-counter
+ * scene whose labels resolve to custom object components, so every
+ * generated level slot renders rich visual art.
  */
 export const PREVIEW_ANALYSIS: SceneAnalysis = {
   sceneType: "counter",

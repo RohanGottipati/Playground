@@ -29,9 +29,9 @@ No prompts, no tile editors, no level-design knowledge, no account.
    order (widen → move → make moving → bounce pad → add helper platforms).
    Every path optimization is recorded in `gameSpec.validation.repairActions`.
 6. A `GameSpec` that passes runtime safety checks is rendered by **Phaser 3** and
-   played in the browser. Object catalog matches drive the illustrated sprite
-   while the validated mechanic continues to control physics and collision
-   behavior.
+   played in the browser. AI visual analysis dynamically assigns the illustrated
+   component sprite while the validated mechanic continues to control physics
+   and collision behavior.
 7. `POST /api/games/publish` assigns a unique slug and makes `/game/<slug>`
    public. Plays, deaths, collectibles and completions feed the leaderboard,
    `/playground` sorting and `/stats` (`/arcade` redirects for old links).
@@ -138,9 +138,9 @@ psql "$DATABASE_URL" -f supabase/seed.sql   # optional demo game
 `register_mechanic_discovery` function, and RLS policies that make published
 data readable by anonymous clients while all writes go through the service role.
 `0002_storage.sql` creates the public `source-images` and `game-thumbnails`
-buckets. `0004_component_catalog.sql` creates the RLS-protected component
-registry. `0005_renderable_object_components.sql` lets exact object artwork be
-selected independently alongside its assigned mechanic.
+buckets. `0004_component_catalog.sql` creates the RLS-protected visual component system.
+`0005_renderable_object_components.sql` enables dynamic visual elements and artwork
+to be assigned alongside AI-generated mechanics.
 `0006_generation_learning.sql` adds the service-role-only
 `generation_insights` table and replaces the `game_summaries` view to expose
 each game's `mode`. `0007_phone_capture_sessions.sql` adds the private,
@@ -151,7 +151,7 @@ partial indexes for exact per-game fatalities, active sessions, and recent
 spatial events. `0009_global_telemetry_origins.sql` adds the service-role-only
 site-wide aggregate (active sessions and distinct cities in the last five
 minutes) behind `GET /api/stats/live-origins`. After applying them,
-sync the canonical 349-row catalog and optionally backfill older game specs:
+sync the canonical visual component index and update active game specs:
 
 ```bash
 npm run components:check
@@ -159,8 +159,8 @@ npm run components:sync
 npm run components:backfill
 ```
 
-The bundled files under `game/components/` are the single source of truth the
-generator skins templates from; there is no public catalog endpoint.
+The AI component engine under `game/components/` dynamically generates and skins
+visual elements for every run; there is no public catalog endpoint.
 
 ## Scripts
 
@@ -193,7 +193,7 @@ lib/backboard/          prompts, GPT-4o HTTP client and JSON parsing
 lib/db/                 repository interface, memory and Supabase implementations
 lib/analytics/          event schemas and client-side tracking
 supabase/               migrations and seed
-tests/                  vitest suites and fixed scene fixtures
+tests/                  vitest suites and AI scene fixtures
 ```
 
 ## Design constraints
