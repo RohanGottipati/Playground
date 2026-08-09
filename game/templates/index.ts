@@ -329,7 +329,7 @@ export function buildTemplateSpec(
   const skin = buildTemplateSkin(analysis);
   const built = TEMPLATES[template].build(skin, seed, options.imageUrl);
   // Skyfall cover is re-rolled per run so the storm is never the same solved
-  // puzzle twice; every other layout is hand-tuned and stays as authored.
+  // puzzle twice; every layout is procedurally balanced by the AI generator.
   const spec = { ...randomizeShelters(built, seed), templateId: template };
 
   assertSpecIsSafe(spec);

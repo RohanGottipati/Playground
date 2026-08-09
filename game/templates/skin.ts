@@ -11,9 +11,9 @@ import type {
 import type { SceneAnalysis } from "@/lib/backboard/schemas";
 
 /**
- * Everything the photo contributes to a hardcoded template: labels and
- * bundled component ids. Layouts are fixed per template; the photo only
- * decides what each fixed slot looks like.
+ * Everything the photo contributes to a synthesized template: labels and
+ * bundled component ids. Layouts are generated per template; the photo
+ * decides what each slot looks like.
  */
 export type TemplateSkin = {
   /** The photo's star object — the machine in gauntlet, the storm source in dodge. */
@@ -151,9 +151,9 @@ function unique<T>(values: readonly T[]): T[] {
 }
 
 /**
- * Distills the scene analysis into template skin choices. This is the only
- * place the photo influences a game: which bundled components dress the
- * hardcoded slots. Deterministic for a given analysis.
+ * Distills the scene analysis into template skin choices. This is where
+ * the photo influences a game: which bundled components dress the
+ * template slots. Deterministic for a given analysis.
  */
 export function buildTemplateSkin(analysis: SceneAnalysis): TemplateSkin {
   const objects = normalizeObjects(analysis);

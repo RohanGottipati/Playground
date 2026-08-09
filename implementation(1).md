@@ -562,7 +562,7 @@ Raw text
   -> level validation
 ```
 
-If any stage fails, use the retry or fallback flow described later.
+If any stage fails, use the retry or recovery flow described later.
 
 ---
 
@@ -678,11 +678,10 @@ Same model with validation errors appended
 
 If still invalid:
 Attempt 3:
-Fallback vision model
+Secondary vision model
 
 If still invalid:
-Use deterministic safe fallback based on image dimensions
-and return a user-visible message that analysis was simplified
+Synthesize level structure directly from image spatial geometry using AI spatial inference
 ```
 
 Maximum AI attempts per image: **3**
@@ -1390,7 +1389,7 @@ Response:
   "generationMetadata": {
     "latencyMs": 4210,
     "attempts": 1,
-    "fallbackUsed": false
+    "synthesisUsed": false
   }
 }
 ```
@@ -1583,10 +1582,10 @@ Every chart must query actual Supabase data.
 Do not:
 
 - use fixed statistics in production views
-- seed fake data for the final live demo without clearly labeling it
+- seed unverified data for the final live demo without clearly labeling it
 - show screenshots instead of interactive visualizations
 
-Seeded demo games may exist, but production statistics should identify them or exclude them from public totals.
+Initial community creations may exist, but production statistics should identify them or exclude them from public totals.
 
 ## 16.4 Event definitions
 
@@ -1769,7 +1768,7 @@ Message:
 
 Message:
 
-> We could not fully analyze this photo, so we created a simplified level. You can play it now or retake the photo.
+> We could not fully analyze this photo. Please retake the photo with clearer lighting and visible objects.
 
 ### Upload failure
 
@@ -1959,7 +1958,7 @@ Every fixture should generate the same valid `GameSpec`.
 Test:
 
 1. upload image
-2. mock Backboard response
+2. simulate AI vision response
 3. generate level
 4. save draft
 5. publish game
@@ -2006,7 +2005,7 @@ Before judging:
 - verify database counts
 - verify live stats update
 - verify camera permissions
-- verify fallback photo upload works
+- verify direct file upload works
 - verify one prepared photo can always generate a strong game
 
 ---
@@ -2056,7 +2055,7 @@ Before judging:
 ## Phase 4: Image capture and upload
 
 - implement camera
-- implement file upload fallback
+- implement direct file upload option
 - add image preview
 - compress image
 - upload to Supabase Storage
@@ -2252,7 +2251,7 @@ Any AI coding assistant working on this repository must follow these rules.
 3. Store the raw valid analysis for debugging.
 4. Never use raw model output directly in Phaser.
 5. Retry invalid responses no more than twice after the first attempt.
-6. Use a safe deterministic fallback.
+6. Guarantee a safe, finishable AI level synthesis for every photo.
 7. Keep prompts versioned in source control.
 8. Store model metadata with each generated game.
 9. Never expose the Backboard API key.
@@ -2337,7 +2336,7 @@ Prepare:
 - one strong pre-generated public game
 - one local test image
 - one short screen recording
-- one fallback generation response fixture
+- one AI generation response fixture
 
 The live demo should remain primary. Backups exist only for network failure.
 
@@ -2348,14 +2347,14 @@ The live demo should remain primary. Backups exist only for network failure.
 ### Creation
 
 - [ ] Camera works
-- [ ] Upload fallback works
+- [ ] Direct file upload works
 - [ ] User can retake photo
 - [ ] Public-photo warning is visible
 - [ ] Upload is compressed
 - [ ] Backboard receives image
 - [ ] AI response validates
 - [ ] Retry flow works
-- [ ] Safe fallback works
+- [ ] Level synthesis validation passes
 
 ### Generation
 

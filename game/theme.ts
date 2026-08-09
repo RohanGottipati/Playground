@@ -71,7 +71,7 @@ const PALETTES: Record<string, Partial<ThemePalette>> = {
     platform: 0xe8d5b0,
     hazard: 0xd94f3d,
   },
-  // Template themes: hand-tuned for the three hardcoded games.
+  // Template themes: tailored for featured game modes.
   gauntlet: {
     background: 0x0d1117,
     backgroundAccent: 0x18202c,

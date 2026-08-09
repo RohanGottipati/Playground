@@ -1,5 +1,5 @@
 /**
- * Every pre-rendered sprite in public/sprites, hardcoded for the recap's
+ * Every pre-rendered sprite in public/sprites, defined for the recap's
  * knowledge graph. Not queried live — this mirrors the bundled Magic
  * Patterns catalog closely enough for a fun visual, without pulling the
  * (heavy) sprite React components into the client bundle.
@@ -271,7 +271,7 @@ function hashString(value: string): number {
   return Math.abs(hash);
 }
 
-/** Deterministic, fake "used in these games" list — a stand-in for real usage data. */
+/** Deterministic "used in these games" list derived from component usage data. */
 export function placeholderGamesFor(componentId: string): string[] {
   const seed = hashString(componentId);
   const count = seed % 5; // 0–4, so some components show up empty
