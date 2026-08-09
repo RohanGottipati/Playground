@@ -20,7 +20,6 @@ const VIOLET = 0x8b5cf6;
 
 export type EntityArtCarrier = {
   art: Phaser.GameObjects.Container;
-  artLabel?: Phaser.GameObjects.Text;
   visualKind: EntityVisualKind;
   componentId?: string;
   usesExactObjectArt: boolean;
@@ -855,27 +854,8 @@ export function attachEntityArt<T extends RectangleBody>(
   art.setDepth(entity.mechanic === "goal" ? 7 : 4);
   bodyObject.setVisible(false);
 
-  let artLabel: Phaser.GameObjects.Text | undefined;
-  if (entity.sourceLabel) {
-    artLabel = scene.add.text(
-      bodyObject.x,
-      bodyObject.y - bodyObject.height / 2 - 13,
-      entity.sourceLabel.slice(0, 18),
-      {
-        fontFamily: "monospace",
-        fontSize: "12px",
-        color: palette.label,
-        backgroundColor: "rgba(20,17,15,0.78)",
-        padding: { x: 5, y: 3 },
-      },
-    );
-    artLabel.setOrigin(0.5, 0.5);
-    artLabel.setDepth(8);
-  }
-
   const decorated = bodyObject as T & EntityArtCarrier;
   decorated.art = art;
-  decorated.artLabel = artLabel;
   decorated.visualKind = visual.kind;
   decorated.componentId = visual.componentId;
   decorated.usesExactObjectArt = componentImages.length > 0;
@@ -884,12 +864,10 @@ export function attachEntityArt<T extends RectangleBody>(
 
 export function syncEntityArt(object: RectangleBody & EntityArtCarrier): void {
   object.art.setPosition(object.x, object.y);
-  object.artLabel?.setPosition(object.x, object.y - object.height / 2 - 13);
 }
 
 export function destroyEntityArt(object: EntityArtCarrier): void {
   object.art.destroy(true);
-  object.artLabel?.destroy();
 }
 
 function reducedMotion(): boolean {

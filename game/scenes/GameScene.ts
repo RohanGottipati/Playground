@@ -738,12 +738,9 @@ export class GameScene extends Phaser.Scene {
   /** Fades a shelter out, drops it from `solids`, then restores it later. */
   private vanishShelter(shelter: ShelterRuntime, profile: ShelterMovementProfile) {
     shelter.busy = true;
-    const fadeTargets: (Phaser.GameObjects.Container | Phaser.GameObjects.Text)[] =
-      [shelter.rect.art];
-    if (shelter.rect.artLabel) fadeTargets.push(shelter.rect.artLabel);
 
     this.tweens.add({
-      targets: fadeTargets,
+      targets: shelter.rect.art,
       alpha: 0,
       duration: 260,
       onComplete: () => {
@@ -764,12 +761,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (!this.solids.includes(shelter.rect)) this.solids.push(shelter.rect);
     shelter.vanished = false;
-    const fadeTargets: (Phaser.GameObjects.Container | Phaser.GameObjects.Text)[] =
-      [shelter.rect.art];
-    if (shelter.rect.artLabel) fadeTargets.push(shelter.rect.artLabel);
 
     this.tweens.add({
-      targets: fadeTargets,
+      targets: shelter.rect.art,
       alpha: 1,
       duration: 260,
       onComplete: () => {

@@ -1,5 +1,7 @@
 import { renderMagicPatternSvg } from "@/magic-patterns/render";
 import type { SceneAnalysis } from "@/lib/backboard/schemas";
+import { scrubBrandNames } from "@/lib/utils/genericName";
+import { sanitizeTitle } from "@/lib/utils/sanitize";
 import { objectComponentIdFor } from "./skin";
 
 export const PREVIEW_WIDTH = 640;
@@ -167,7 +169,9 @@ export function composeScenePreviewSvg(analysis: SceneAnalysis): string {
     sprites.push(placed);
   }
 
-  const caption = escapeXml(analysis.titleSuggestion);
+  const caption = escapeXml(
+    sanitizeTitle(scrubBrandNames(analysis.titleSuggestion)),
+  );
   const count = analysis.objects.length;
 
   return [

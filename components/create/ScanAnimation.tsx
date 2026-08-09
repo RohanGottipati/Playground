@@ -31,6 +31,7 @@ export function ScanAnimation({ imageUrl, scanning, objects = [] }: Props) {
       {objects.map((object) => (
         <div
           key={object.id}
+          aria-hidden
           className="absolute rounded border-2 border-screen bg-screen/10"
           style={{
             left: `${object.bounds.x * 100}%`,
@@ -38,11 +39,7 @@ export function ScanAnimation({ imageUrl, scanning, objects = [] }: Props) {
             width: `${object.bounds.width * 100}%`,
             height: `${object.bounds.height * 100}%`,
           }}
-        >
-          <span className="absolute -top-5 left-0 rounded bg-ink/80 px-1 font-mono text-[10px] text-screen">
-            {object.label}
-          </span>
-        </div>
+        />
       ))}
     </div>
   );

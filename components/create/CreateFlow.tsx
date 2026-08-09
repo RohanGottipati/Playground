@@ -310,7 +310,6 @@ export function CreateFlow({ parentGameId }: { parentGameId?: string }) {
                         key={entity.id}
                         className="rounded-full border-2 border-ink bg-cabinet px-3 py-1 font-mono text-[11px] text-paper/80"
                       >
-                        {entity.sourceLabel} →{" "}
                         {entity.mechanic.replace(/_/g, " ")}
                       </span>
                     ))}

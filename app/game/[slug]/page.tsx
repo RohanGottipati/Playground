@@ -30,13 +30,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-/** The photographed props, shown with the very art the level renders. */
+/**
+ * The photographed props, shown with the very art the level renders. Grouped
+ * by source object internally so repeats collapse into one tile with a
+ * count, but the object's detected name never reaches this panel — only its
+ * art and its generic gameplay role are user-facing.
+ */
 function ObjectsPanel({ spec }: { spec: GameSpec }) {
-  // A level reuses the same prop for many slots, so count them rather than
-  // printing "lollipop" ten times.
   const props = new Map<
     string,
-    { label: string; mechanic: string; componentId?: string; count: number }
+    { mechanic: string; componentId?: string; count: number }
   >();
   for (const entity of spec.entities) {
     if (!entity.sourceLabel) continue;
@@ -47,7 +50,6 @@ function ObjectsPanel({ spec }: { spec: GameSpec }) {
       continue;
     }
     props.set(key, {
-      label: entity.sourceLabel,
       mechanic: entity.mechanic,
       componentId: entity.visual?.componentId,
       count: 1,
@@ -81,13 +83,10 @@ function ObjectsPanel({ spec }: { spec: GameSpec }) {
               </span>
               <span className="min-w-0">
                 <span className="block truncate font-mono text-[11px] text-paper/90">
-                  {entity.label}
+                  {entity.mechanic.replace(/_/g, " ")}
                   {entity.count > 1 ? (
                     <span className="text-paper/45"> ×{entity.count}</span>
                   ) : null}
-                </span>
-                <span className="block truncate font-mono text-[10px] uppercase text-paper/45">
-                  {entity.mechanic.replace(/_/g, " ")}
                 </span>
               </span>
             </li>
