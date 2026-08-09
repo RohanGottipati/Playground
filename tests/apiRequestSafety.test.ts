@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { POST as postEvent } from "@/app/api/events/route";
 import { POST as postSession } from "@/app/api/events/session/route";
 import { POST as postGenerate } from "@/app/api/games/generate/route";
@@ -20,10 +20,35 @@ import { resetRateLimits } from "@/lib/utils/rateLimit";
  * returned a 500 before the body readers and the UUID guard existed.
  */
 
+// These are unit tests: they must behave the same wherever they run. Without
+// this the suite silently changes shape when the environment — a developer's
+// shell, CI, or a Vercel build with the real project env vars — happens to
+// have Supabase configured, and the route cases start querying the live
+// database during a build.
+const supabaseEnvKeys = [
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
+] as const;
+let savedSupabaseEnv: Record<string, string | undefined> = {};
+
 beforeEach(() => {
+  savedSupabaseEnv = Object.fromEntries(
+    supabaseEnvKeys.map((key) => [key, process.env[key]]),
+  );
+  for (const key of supabaseEnvKeys) delete process.env[key];
+
   resetRateLimits();
   resetMemoryState();
   resetRepository();
+});
+
+afterEach(() => {
+  resetRepository();
+  for (const key of supabaseEnvKeys) {
+    const value = savedSupabaseEnv[key];
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
 });
 
 function jsonRequest(body: string): Request {
@@ -112,9 +137,9 @@ describe("id-or-slug routes tolerate a non-UUID segment", () => {
 /**
  * Postgres rejects a non-UUID comparison against a `uuid` column with 22P02.
  * The guard has to short-circuit before the query so a slug can fall through to
- * the slug lookup. No Supabase credentials are configured under vitest, so
- * reaching the client at all throws — which is exactly what proves the
- * short-circuit happened.
+ * the slug lookup. The suite clears the Supabase credentials, so reaching the
+ * client at all throws — which is exactly what proves the short-circuit
+ * happened.
  */
 describe("SupabaseRepository UUID guard", () => {
   const db = new SupabaseRepository();
