@@ -147,7 +147,9 @@ short-lived pairing records used by QR phone capture; raw bearer tokens are
 never stored and the table has no anonymous access.
 `0008_telemetry_dashboard.sql` adds service-role-only telemetry aggregates and
 partial indexes for exact per-game fatalities, active sessions, and recent
-spatial events. After applying them,
+spatial events. `0009_global_telemetry_origins.sql` adds the service-role-only
+site-wide aggregate (active sessions and distinct cities in the last five
+minutes) behind `GET /api/stats/live-origins`. After applying them,
 sync the canonical 349-row catalog and optionally backfill older game specs:
 
 ```bash
@@ -156,9 +158,8 @@ npm run components:sync
 npm run components:backfill
 ```
 
-`GET /api/components` reads enabled rows from Supabase and supports `category`,
-`scope`, `mechanic`, and `q` filters. It falls back to the same source catalog
-when Supabase is unavailable.
+The bundled files under `game/components/` are the single source of truth the
+generator skins templates from; there is no public catalog endpoint.
 
 ## Scripts
 
