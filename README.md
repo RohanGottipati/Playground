@@ -7,36 +7,61 @@ becomes — then publish it to a shared public playground.
 
 No prompts, no tile editors, no level-design knowledge, no account.
 
+## Features
+
+- **Photo → game**: one photo of everyday objects is analyzed by GPT-4o (via
+  the Backboard AI gateway) and turned into a playable Phaser 3 platformer
+  dressed in sprites of the objects it found.
+- **Phone capture from desktop**: `/create` on a desktop can show a one-time QR
+  code that opens a camera-only `/capture/<token>` page on a phone; the photo
+  appears on the desktop automatically. A normal file picker is always
+  available, and phones open their camera directly.
+- **24 hand-built level templates across five modes** — classic, shooter,
+  skyfall, rush and gauntlet — each with a pre-game rules popup.
+- **Publish & share**: published games get a public `/game/<slug>` page with a
+  leaderboard and a share button; `/playground` lists published games and
+  lets players like them (`/arcade` permanently redirects there for old links).
+- **Stats & telemetry**: `/stats` shows site-wide metrics, a per-game telemetry
+  dashboard (death heatmap, fatalities, active sessions, live event ticker,
+  runtime leaderboard, object topology), live player origins, and a weekly
+  recap.
+- **Runs without a database**: without Supabase credentials everything is
+  stored in the server process.
+
 ## How it works
 
-1. `/create` takes one photo containing one or more visible objects. Phones open
-   their camera directly; desktops can show a one-time QR code that opens the
-   camera-only `/capture/<token>` page on a phone. The phone upload appears on
-   the desktop automatically, while a normal desktop file picker remains
-   available.
+1. `/create` takes one photo containing one or more visible objects.
 2. `POST /api/uploads` validates, rotates and normalizes the photo to JPEG, then
    stores it (Supabase Storage, or an in-process store locally).
 3. `POST /api/games/generate` sends the image to **Backboard GPT-4o** with a
-   strict JSON-only prompt. The response is extracted, `zod`-validated, and
-   transient failures are retried up to three times without changing models.
-   Authentication, billing and model configuration failures stop with an
-   actionable error; an unverified or pre-made scene is never substituted.
-4. Detected objects are clamped, deduplicated and mapped to mechanics
-   deterministically — the model never controls physics or playability.
-5. Sparse photos receive dynamic helper platforms synthesized to complete a
-   playable route. The level is generated originally, its reachability graph is
-   BFS-checked from the spawn, and level geometry is optimized in an intelligent
-   order (widen → move → make moving → bounce pad → add helper platforms).
-   Every path optimization is recorded in `gameSpec.validation.repairActions`.
-6. A `GameSpec` that passes runtime safety checks is rendered by **Phaser 3** and
-   played in the browser. AI visual analysis dynamically assigns the illustrated
-   component sprite while the validated mechanic continues to control physics
-   and collision behavior.
+   strict JSON-only prompt (`lib/backboard/`). The response is extracted,
+   `zod`-validated, and failed attempts are retried up to three times without
+   changing models. Authentication, billing and model configuration failures
+   stop with an actionable error; a pre-made scene is never substituted.
+4. Detected objects are clamped, deduplicated and classified deterministically
+   (`game/generation/normalizeObjects.ts`, `assignMechanics.ts`). Titles and
+   object labels are scrubbed of brand/product names
+   (`lib/utils/genericName.ts`).
+5. The photo is mapped onto one of the hand-built templates in
+   `game/templates/`. The analysis only decides which bundled sprite components
+   dress each template's fixed slots (`game/templates/skin.ts`); layouts and
+   objectives are hand-built. The template is a seeded, difficulty-weighted
+   pick that never repeats any of the last three templates and demotes the
+   modes of the last two runs — unless the photo matches an object-signature
+   recipe (e.g. earbud case + phone + bottle → *Case Barrage*,
+   `game/templates/detectTrio.ts`), which is selected outright.
+6. The resulting `GameSpec` must pass runtime safety checks
+   (`game/generation/runtimeSafety.ts`) and is then rendered by **Phaser 3** in
+   the browser. The scene stays paused behind the rules popup until the player
+   presses Play.
 7. `POST /api/games/publish` assigns a unique slug and makes `/game/<slug>`
    public. Plays, deaths, collectibles and completions feed the leaderboard,
-   `/playground` sorting and `/stats` (`/arcade` redirects for old links).
+   `/playground` sorting and `/stats`.
 
-### Object → mechanic mapping
+Every run is seeded (`spec.seed`), so a new photo produces a fresh game while
+published games replay identically.
+
+### Object roles
 
 | Object shape / role | Mechanic |
 | --- | --- |
@@ -49,87 +74,119 @@ No prompts, no tile editors, no level-design knowledge, no account.
 | hovering drones (shooter mode only) | `target` |
 | the farthest reachable landmark | `goal` |
 
-## Game modes & rules popup
+Each detected object's mechanic is stored in `game_objects`.
 
-Every run is seeded (`spec.seed`), so the same photo produces a different game
-each time while published games replay identically. A weighted, seeded picker
-(`game/generation/selectMode.ts`) chooses one of four modes based on the
-photographed objects and what the database has learned from previous runs:
+### Game modes
 
 - **classic** — reach the exit door.
-- **shooter** — destroy hovering drones with projectiles (ammo is dynamically
-  synthesized from detected round/small objects or energy projectiles) before the
-  goal unlocks. Projectiles fly straight and pass through platforms so every
-  drone is always hittable.
-- **skyfall** — detected objects rain from the sky; touching one is fatal. A
-  safe zone around spawn is never bombarded.
-- **rush** — grab every collectible before a generous timer expires; running
-  out restarts the run, never bricks it.
+- **shooter** — destroy hovering drones with projectiles before the goal
+  unlocks.
+- **skyfall** — objects rain from the sky; touching one is fatal. A safe zone
+  around spawn is never bombarded.
+- **rush** — grab every collectible before the timer expires.
+- **gauntlet** — a machine built from the photo's star object hurls objects
+  at you; cross the course and touch the finish flag.
 
-Modes are applied *after* the level is validated and only ever add floating
-entities, so the verified route to the goal cannot break. If scene geometry
-requires simplified entity placement, the AI smoothly adapts the run to classic
-mode — ensuring every level is finishable. Each spec carries mode-specific `rules`
-(`game/generation/rules.ts`) rendered as a pre-game popup; the scene idles
-(physics paused, no timer) until the player presses Play. Titles and object
-labels are scrubbed of brand/product names (`lib/utils/genericName.ts`) both
-in the analysis prompt and again at generation time.
+### Sprite art
 
-## Magic Patterns design flow
+`magic-patterns/` contains the React SVG sprite components (everyday objects
+plus core game pieces) and the registry that maps component ids to them.
+Because react-dom/server can't be bundled by the App Router, sprites are
+pre-rendered to static files in `public/sprites/` (`npm run sprites:generate`)
+and template cover art to `public/template-previews/`
+(`npm run previews:generate`). `game/components/` holds the component catalog
+used to resolve detected labels to sprites.
 
-```
-[Prompt] → [AI Agent] → (MCP/API call) → [Magic Patterns] → [Editor URL & Spec] → [Adapts Code]
-```
-
-When `MAGIC_PATTERNS_API_KEY` is set, the generate route makes a server-side
-REST call (the MCP-server-call equivalent for a web runtime) to
-`POST https://api.magicpatterns.com/api/v2/pattern` with a design prompt built
-from the spec plus the source photo (`lib/magicpatterns/client.ts`). The
-returned source files are mined for a palette
-(`lib/magicpatterns/adapt.ts`) that tints the Phaser theme
-(`paletteForSpec` in `game/theme.ts`), and the editor/preview URLs are stored
-on `spec.magicPatterns` and surfaced in the create flow. The call is
-best-effort with a timeout (`MAGIC_PATTERNS_TIMEOUT_MS`, default 25s) and can
-never fail generation.
-
-## Learning loop
+### Generation history
 
 Every generation writes a row to `generation_insights` (mode, seed, title,
-labels, mechanics, Magic Patterns id — service-role only, migration
+labels, mechanics — service-role only, migration
 `0006_generation_learning.sql`). The next generation reads
-`getGenerationHints()` — the last 12 modes/titles plus per-mode completion
-rates joined from sessions — to avoid repeating recent modes and titles and to
-demote modes with under 10% completion over 8+ plays. Hint reads and insight
-writes are non-fatal everywhere: a database without migration 0006 simply
-yields empty hints.
+`getGenerationHints()`, whose recent-template history drives the no-repeat
+template pick. Hint reads and insight writes are non-fatal: a database without
+migration 0006 simply yields empty hints.
+
+## Tech stack
+
+- Next.js 15 (App Router) + React 19 + TypeScript
+- Tailwind CSS 3, Framer Motion
+- Phaser 3 game engine
+- Supabase (Postgres, Storage, Realtime) via `@supabase/supabase-js`
+- Backboard AI gateway pinned to `openai/gpt-4o`
+- zod for schema validation, sharp for image normalization, qrcode.react for
+  phone pairing
+- Vitest for tests, Playwright for the deployment smoke test
+
+## Project structure
+
+```
+app/                    routes (/, /create, /capture/[token], /game/[slug],
+                        /playground, /stats, /arcade) and API handlers (app/api)
+components/             UI: create flow, playground, game shell, stats dashboards
+game/                   Phaser scenes/entities, art, theme and domain types
+  templates/            hand-built level templates, skinning, campaign seed
+  generation/           object normalization, mechanics, rules, safety checks
+  components/           component catalog used to resolve labels to sprites
+magic-patterns/         React SVG sprite components and registry
+lib/backboard/          prompts, GPT-4o HTTP client and JSON parsing
+lib/db/                 repository interface, memory and Supabase implementations
+lib/analytics/          event schemas and client-side tracking
+lib/capture/            QR phone-capture sessions
+public/                 pre-rendered sprites, template previews, videos, images
+scripts/                asset generation, catalog sync, seeding, smoke test
+supabase/               migrations and seed
+tests/                  vitest suites and AI scene fixtures
+```
+
+`index.html` is a standalone static landing mockup, and
+`implementation(1).md` is the original implementation plan (written under the
+earlier working name "Snapcade"); neither is used by the app.
+
+## Prerequisites
+
+- Node.js 20+ and npm (CI uses Node 20)
+- A Backboard API key with access to `openai/gpt-4o` for photo analysis
+- Optional: a Supabase project (and the Supabase CLI or `psql`) for persistence
 
 ## Running locally
 
 ```bash
 npm install
-cp .env.example .env.local
-npm run dev
+cp .env.example .env.local   # then fill in the values you have
+npm run dev                  # http://localhost:3000
 ```
 
-Playground degrades cleanly when persistence is not configured:
+Playground degrades cleanly when services are not configured:
 
 - **No Supabase credentials** → games, sessions, events and images live in the
-  server process (`lib/db/memory.ts`). The full create → play → publish → playground
-  → stats loop works, but data resets on restart.
+  server process (`lib/db/memory.ts`). The full create → play → publish →
+  playground → stats loop works, but data resets on restart.
 - **No Backboard credentials or chat entitlement** → photo analysis stops with
-  a clear error, ensuring every level experience is uniquely generated by AI
-  rather than displaying pre-made content.
+  a clear error instead of showing pre-made content.
 
 ### Environment variables
 
-See `.env.example`. `BACKBOARD_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are
-server-only and are never exposed to the browser.
+See `.env.example`.
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (optional locally) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key for read-only browser/server queries |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only key used for all writes |
+| `BACKBOARD_API_KEY` | Server-only Backboard key; required for photo analysis |
+| `BACKBOARD_ASSISTANT_ID` | Optional Backboard assistant to attach requests to |
+| `BACKBOARD_PRIMARY_PROVIDER` / `BACKBOARD_PRIMARY_MODEL` | Must be `openai` / `gpt-4o`; any other value is rejected |
+| `BACKBOARD_TIMEOUT_MS` | Optional per-attempt timeout (default 25000) |
+| `NEXT_PUBLIC_APP_URL` | Public base URL, used for share links and resolving relative image URLs |
+| `GAME_EVENT_SECRET` | Shared secret required to unpublish a game (`DELETE /api/games/[id]`) |
+| `PLAYGROUND_FORCE_TEMPLATE` | Dev-only: force every generation onto one template id (ignored in production) |
+| `PLAYGROUND_BASE_URL` | Target for `npm run test:deployment` when `--base-url` is not passed |
 
 ### Supabase setup
 
 ```bash
 supabase db push          # or run supabase/migrations/*.sql in order
-psql "$DATABASE_URL" -f supabase/seed.sql   # optional demo game
+psql "$DATABASE_URL" -f supabase/seed.sql   # optional demo games
 ```
 
 `0001_init.sql` creates `games`, `game_objects`, `game_sessions`, `game_events`,
@@ -138,42 +195,60 @@ psql "$DATABASE_URL" -f supabase/seed.sql   # optional demo game
 `register_mechanic_discovery` function, and RLS policies that make published
 data readable by anonymous clients while all writes go through the service role.
 `0002_storage.sql` creates the public `source-images` and `game-thumbnails`
-buckets. `0004_component_catalog.sql` creates the RLS-protected visual component system.
-`0005_renderable_object_components.sql` enables dynamic visual elements and artwork
-to be assigned alongside AI-generated mechanics.
-`0006_generation_learning.sql` adds the service-role-only
-`generation_insights` table and replaces the `game_summaries` view to expose
-each game's `mode`. `0007_phone_capture_sessions.sql` adds the private,
-short-lived pairing records used by QR phone capture; raw bearer tokens are
-never stored and the table has no anonymous access.
-`0008_telemetry_dashboard.sql` adds service-role-only telemetry aggregates and
-partial indexes for exact per-game fatalities, active sessions, and recent
-spatial events. `0009_global_telemetry_origins.sql` adds the service-role-only
-site-wide aggregate (active sessions and distinct cities in the last five
-minutes) behind `GET /api/stats/live-origins`. After applying them,
-sync the canonical visual component index and update active game specs:
+buckets. `0003_realtime.sql` enables realtime updates.
+`0004_component_catalog.sql` creates the RLS-protected visual component catalog.
+`0005_renderable_object_components.sql` lets sprite components be assigned
+alongside mechanics. `0006_generation_learning.sql` adds the service-role-only
+`generation_insights` table and exposes each game's `mode` in `game_summaries`.
+`0007_phone_capture_sessions.sql` adds the private, short-lived pairing records
+used by QR phone capture; raw bearer tokens are never stored and the table has
+no anonymous access. `0008_telemetry_dashboard.sql` adds service-role-only
+telemetry aggregates and partial indexes for per-game fatalities, active
+sessions, and recent spatial events. `0009_global_telemetry_origins.sql` adds
+the site-wide aggregate (active sessions and distinct cities in the last five
+minutes) behind `GET /api/stats/live-origins`.
+
+After applying the migrations, sync the component catalog, update existing game
+specs, and seed the campaign games:
 
 ```bash
-npm run components:check
-npm run components:sync
-npm run components:backfill
+npm run components:check     # validate the registry locally (no writes)
+npm run components:sync      # idempotently upsert the registry to Supabase
+npm run components:backfill  # add component IDs to legacy game specs
+npm run templates:seed       # dry run; re-run with -- --apply --confirm-project-ref <ref>
 ```
 
-The AI component engine under `game/components/` dynamically generates and skins
-visual elements for every run; there is no public catalog endpoint.
+These scripts read `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+from the environment or a local `.env` file.
 
 ## Scripts
 
 ```bash
-npm run dev        # dev server
-npm run build      # production build
-npm run lint       # eslint
-npm run typecheck  # tsc --noEmit
-npm test           # vitest (generation, parsing, repository, events)
-npm run components:check     # validate all 349 registry entries locally
-npm run components:sync      # idempotently upsert the registry to Supabase
+npm run dev                # Next.js dev server
+npm run build              # runs the test suite (prebuild), then next build
+npm start                  # serve the production build
+npm run lint               # next lint (eslint)
+npm run typecheck          # tsc --noEmit
+npm test                   # vitest run
+npm run test:watch         # vitest in watch mode
+npm run components:check   # validate the component registry (dry run)
+npm run components:sync    # upsert the component registry to Supabase
 npm run components:backfill  # add component IDs to legacy game specs
+npm run sprites:generate   # pre-render sprites to public/sprites
+npm run previews:generate  # render template cover art to public/template-previews
+npm run assets:generate    # both of the above
+npm run assets:check       # verify generated assets are up to date
+npm run templates:seed     # seed campaign games into Supabase (dry run by default)
+npm run test:deployment -- --base-url <url>  # Playwright smoke test of a deployment
 ```
+
+## Deployment
+
+The generate route sets `maxDuration = 180` for Vercel serverless functions.
+`.github/workflows/deployment-smoke.yml` runs on successful GitHub
+`deployment_status` events for the Production environment: it installs
+Chromium and runs `npm run test:deployment` against the deployed URL, uploading
+`test-results/deployment-smoke.json` as an artifact.
 
 ## Controls
 
@@ -182,28 +257,13 @@ npm run components:backfill  # add component IDs to legacy game specs
 - Mobile: on-screen left / right / jump / restart buttons, plus a shoot button
   in shooter mode.
 
-## Layout
-
-```
-app/                    routes and API handlers
-components/             UI: create flow, playground, game shell, stats dashboards
-game/                   engine-agnostic domain + Phaser scenes/entities
-  generation/           normalize → assign mechanics → repair → validate → spec
-lib/backboard/          prompts, GPT-4o HTTP client and JSON parsing
-lib/db/                 repository interface, memory and Supabase implementations
-lib/analytics/          event schemas and client-side tracking
-supabase/               migrations and seed
-tests/                  vitest suites and AI scene fixtures
-```
-
 ## Design constraints
 
 - The AI returns **JSON only**; it never emits code, physics values or level
-  geometry decisions.
+  geometry.
 - Every Backboard attempt is pinned to `openai/gpt-4o`.
 - Everything after the AI boundary is deterministic: the same scene analysis
-  always produces the same `GameSpec`.
-- A level is only playable after `collectSafetyIssues()` reports no problems.
+  and seed always produce the same `GameSpec`.
 - Photos on published games are public; the create flow warns about this before
   the first upload.
 

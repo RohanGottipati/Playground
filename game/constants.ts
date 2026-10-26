@@ -37,10 +37,6 @@ export const PROJECTILE_COOLDOWN_MS = 320;
 export const PROJECTILE_MAX_RANGE = WORLD_WIDTH;
 export const PROJECTILE_SIZE = 22;
 
-export const SKYFALL_MIN_INTERVAL_MS = 900;
-export const SKYFALL_MAX_INTERVAL_MS = 2600;
-export const SKYFALL_MIN_FALL_SPEED = 170;
-export const SKYFALL_MAX_FALL_SPEED = 340;
 export const SKYFALL_MAX_CONCURRENT = 6;
 export const SKYFALL_OBJECT_SIZE = 42;
 /** Falling objects never spawn inside the spawn-safe corridor. */
