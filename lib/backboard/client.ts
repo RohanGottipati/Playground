@@ -66,10 +66,6 @@ function configuredModel(): ModelChoice {
   return { provider: REQUIRED_PROVIDER, model: REQUIRED_MODEL };
 }
 
-export function isBackboardConfigured(): boolean {
-  return Boolean(process.env.BACKBOARD_API_KEY?.trim());
-}
-
 function asString(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }

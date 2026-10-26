@@ -22,7 +22,6 @@
     "test:deployment": "tsx scripts/smoke-deployment.mts"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.0",
     "framer-motion": "11.18.2",
     "next": "15.5.22",

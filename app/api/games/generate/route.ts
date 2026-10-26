@@ -24,8 +24,8 @@ export const runtime = "nodejs";
  * Must exceed this route's own worst-case budget, or Vercel kills the
  * invocation with an opaque FUNCTION_INVOCATION_TIMEOUT before the handler can
  * report a real error. Analysis alone can spend 75s (3 Backboard attempts at a
- * 25s timeout each), plus up to 25s of best-effort Magic Patterns and the image
- * fetch, so 60s was reachable in normal operation.
+ * 25s timeout each), plus the image fetch, so 60s was reachable in normal
+ * operation.
  */
 export const maxDuration = 180;
 

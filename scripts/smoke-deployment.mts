@@ -4,11 +4,27 @@ import { chromium, type Page } from "playwright";
 import {
   campaignGameId,
 } from "../game/templates/campaignSeed";
-import { TEMPLATE_IDS, TEMPLATES } from "../game/templates";
+import { CAMPAIGN_TEMPLATE_IDS, TEMPLATES } from "../game/templates";
 import type { GameSpec } from "../game/types";
 
 const MEDIA_PATTERN = /\.(?:gif|jpe?g|mp4|png|svg|webp)$/i;
 const REPORT_PATH = join(process.cwd(), "test-results", "deployment-smoke.json");
+
+/**
+ * Vercel Deployment Protection puts per-deployment URLs behind a login
+ * redirect; this header (Protection Bypass for Automation) lets the smoke test
+ * reach them. Production aliases are public and need no bypass.
+ */
+const BYPASS_SECRET = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
+const REQUEST_HEADERS: Record<string, string> = {
+  "user-agent": "playground-deployment-smoke/1.0",
+  ...(BYPASS_SECRET
+    ? {
+        "x-vercel-protection-bypass": BYPASS_SECRET,
+        "x-vercel-set-bypass-cookie": "true",
+      }
+    : {}),
+};
 
 type GameSummary = {
   id: string;
@@ -77,10 +93,13 @@ async function publicMediaPaths(): Promise<string[]> {
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, {
-    headers: { "user-agent": "playground-deployment-smoke/1.0" },
-  });
+  const response = await fetch(url, { headers: REQUEST_HEADERS });
   if (!response.ok) throw new Error(`${response.status} ${url}`);
+  if (new URL(response.url).host !== new URL(url).host) {
+    throw new Error(
+      `${url} redirected to ${response.url}; the deployment is protected. Set VERCEL_AUTOMATION_BYPASS_SECRET or test a public URL.`,
+    );
+  }
   return (await response.json()) as T;
 }
 
@@ -115,9 +134,7 @@ async function checkHttpUrls(urls: readonly string[], failures: string[]) {
       const url = queue.shift();
       if (!url) return;
       try {
-        const response = await fetch(url, {
-          headers: { "user-agent": "playground-deployment-smoke/1.0" },
-        });
+        const response = await fetch(url, { headers: REQUEST_HEADERS });
         if (!response.ok) failures.push(`HTTP ${response.status}: ${url}`);
       } catch (error) {
         failures.push(
@@ -159,6 +176,12 @@ async function checkGameInBrowser(
   try {
     const context = await browser.newContext({
       viewport: { width: 1280, height: 900 },
+      extraHTTPHeaders: BYPASS_SECRET
+        ? {
+            "x-vercel-protection-bypass": BYPASS_SECRET,
+            "x-vercel-set-bypass-cookie": "true",
+          }
+        : undefined,
     });
     // Starting a game must not create sessions or events in production.
     await context.route("**/api/events**", async (route) => {
@@ -242,7 +265,7 @@ async function main() {
     ]);
     report.mediaAssets = mediaPaths.length;
     const summaryById = new Map(allSummaries.map((game) => [game.id, game]));
-    const campaign = TEMPLATE_IDS.map((template) => {
+    const campaign = CAMPAIGN_TEMPLATE_IDS.map((template) => {
       const game = summaryById.get(campaignGameId(template));
       if (!game) throw new Error(`Campaign game missing from API: ${template}`);
       if (
