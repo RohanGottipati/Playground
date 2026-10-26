@@ -247,8 +247,14 @@ npm run test:deployment -- --base-url <url>  # Playwright smoke test of a deploy
 The generate route sets `maxDuration = 180` for Vercel serverless functions.
 `.github/workflows/deployment-smoke.yml` runs on successful GitHub
 `deployment_status` events for the Production environment: it installs
-Chromium and runs `npm run test:deployment` against the deployed URL, uploading
-`test-results/deployment-smoke.json` as an artifact.
+Chromium and runs `npm run test:deployment`, uploading
+`test-results/deployment-smoke.json` as an artifact. Per-deployment Vercel URLs
+are behind Deployment Protection, so the workflow tests the exact deployment
+only when the `VERCEL_AUTOMATION_BYPASS_SECRET` Actions secret (Vercel →
+Settings → Deployment Protection → Protection Bypass for Automation) is set;
+otherwise it tests the public production alias (`PRODUCTION_URL` Actions
+variable, default `https://playground-gaming.vercel.app`). Locally, set
+`VERCEL_AUTOMATION_BYPASS_SECRET` to smoke-test a protected preview URL.
 
 ## Controls
 
