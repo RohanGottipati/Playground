@@ -51,7 +51,11 @@ type SmokeReport = {
   httpUrls: number;
   browserGames: number;
   failures: string[];
+  warnings: string[];
 };
+
+/** React recovers from these by re-rendering on the client; report, don't fail. */
+const HYDRATION_ERROR = /Minified React error #(?:418|423|425)\b|Hydration failed/;
 
 function argumentValue(name: string): string | undefined {
   const exact = process.argv.find((argument) => argument.startsWith(`${name}=`));
@@ -146,13 +150,22 @@ async function checkHttpUrls(urls: readonly string[], failures: string[]) {
   await Promise.all(workers);
 }
 
-function trackBrowserFailures(page: Page, baseUrl: string, failures: string[]) {
+function trackBrowserFailures(
+  page: Page,
+  baseUrl: string,
+  failures: string[],
+  warnings: string[],
+) {
   const current: string[] = [];
-  page.on("pageerror", (error) => current.push(`page error: ${error.message}`));
+  const pushError = (message: string) =>
+    (HYDRATION_ERROR.test(message) ? warnings : current).push(message);
+  page.on("pageerror", (error) => pushError(`page error: ${error.message}`));
   page.on("console", (message) => {
-    if (message.type() === "error") current.push(`console error: ${message.text()}`);
+    if (message.type() === "error") pushError(`console error: ${message.text()}`);
   });
   page.on("requestfailed", (request) => {
+    // Cancelled prefetches and in-flight requests at page close are not failures.
+    if (request.failure()?.errorText === "net::ERR_ABORTED") return;
     if (request.url().startsWith(baseUrl)) {
       current.push(
         `request failed: ${request.url()}: ${request.failure()?.errorText ?? "unknown"}`,
@@ -171,6 +184,7 @@ async function checkGameInBrowser(
   baseUrl: string,
   game: GameSummary,
   failures: string[],
+  warnings: string[],
 ) {
   const browser = await chromium.launch({ headless: true });
   try {
@@ -198,7 +212,13 @@ async function checkGameInBrowser(
 
     const page = await context.newPage();
     const browserFailures: string[] = [];
-    const flushFailures = trackBrowserFailures(page, baseUrl, browserFailures);
+    const browserWarnings: string[] = [];
+    const flushFailures = trackBrowserFailures(
+      page,
+      baseUrl,
+      browserFailures,
+      browserWarnings,
+    );
     try {
       const response = await page.goto(`${baseUrl}/game/${game.slug}`, {
         waitUntil: "domcontentloaded",
@@ -232,6 +252,9 @@ async function checkGameInBrowser(
       for (const failure of browserFailures) {
         failures.push(`${game.slug}: ${failure}`);
       }
+      for (const warning of browserWarnings) {
+        warnings.push(`${game.slug}: ${warning}`);
+      }
       await page.close();
       await context.close();
     }
@@ -256,6 +279,7 @@ async function main() {
     httpUrls: 0,
     browserGames: 0,
     failures: [],
+    warnings: [],
   };
 
   try {
@@ -321,7 +345,7 @@ async function main() {
       process.stdout.write(
         `[${String(index + 1).padStart(2, "0")}/${campaign.length}] ${game.slug}\n`,
       );
-      await checkGameInBrowser(baseUrl, game, report.failures);
+      await checkGameInBrowser(baseUrl, game, report.failures, report.warnings);
       report.browserGames += 1;
     }
   } catch (error) {
@@ -329,6 +353,8 @@ async function main() {
   } finally {
     await writeReport(report);
   }
+
+  for (const warning of report.warnings) console.warn(`warning: ${warning}`);
 
   if (report.failures.length > 0) {
     for (const failure of report.failures) console.error(`- ${failure}`);
